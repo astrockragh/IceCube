@@ -1,3 +1,8 @@
+data
+junk.ipynb
+processed
+db_files
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
