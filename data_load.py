@@ -13,14 +13,14 @@ from spektral.data import Dataset, Graph
 import tensorflow as tf
 
 features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10"]
-targets  = ["energy_log10", "position_x", "position_y", "position_z", "zenith","azimuth"]
+targets  = ["energy_log10", "zenith","azimuth"]
 
 class graph_data(Dataset):
     """
     First hopefully working version of the data
     """
 
-    def __init__(self, n_data = None, transformed=False, muon = True, skip = 0, n_neighbors = 6, restart=False, train_val_test_split = [0.8, 0.1, 0.1], **kwargs):
+    def __init__(self, n_data = None, transform=True, muon = True, skip = 0, n_neighbors = 6, restart=False, train_val_test_split = [0.8, 0.1, 0.1], **kwargs):
         self.n_data = n_data
         self.skip   = skip
         self.n_neighbors = n_neighbors
@@ -28,7 +28,7 @@ class graph_data(Dataset):
             sys.exit("Total splits must add up to 1")
         self.train_size, self.val_size, self.test_split = train_val_test_split
         self.seed = 42
-        self.transform=transformed
+        self.transform=transform
         self.restart=restart
         self.muon=muon
         self.k=0
