@@ -24,6 +24,31 @@ import warnings
 warnings.filterwarnings("ignore")
 # %matplotlib inline
 
+def inspect(event=0 ,event_no=None, angle=45, save=False, degree=False, hist=False):
+    '''Plot a graph in 3d, where the colour is determined by time and the size of the point is determined by charge.
+        Generally, the only thing you need to do is modify the file path to the db_file in load_event.
+        Inspect takes an integer (as just event number x in the database), if not given a specific event_no, which is then loaded in.
+        angle specifies the initial angle (azimuthal) to see the plot from. If you plot with matplotlib notebook you can control the angle.
+        degree: if True we colour based on node degree and not ti,e
+        hist: if true distributions of node features are shown.
+        save should be self-explanatory.'''
+    dt=load_event(event, event_no)[0]
+    X, A, Y=dt.x, dt.a, dt.y
+    if hist:
+        fig1, ax1=plt.subplots(nrows=1, ncols=5, figsize=(10,4))
+        for i in range(len(X[0])):
+            ax1[i].hist(X[:,i], histtype='step')
+            ax1[i].set(xlabel=features[i], yscale='log')
+        fig1.tight_layout()
+    ix, iy,_=scp.find(A)
+    adj=list(zip(ix,iy))
+    G=nx.Graph()
+    for i in np.arange(len(X[:,0])):
+        G.add_node(i, x=X[i,0], y=X[i,1], z=X[i,2], t=X[i,3], q=X[i,4], pos2d=[X[i,0], X[i,1]] ,pos3d=[X[i,0], X[i,1],X[i,2]])
+    G.add_edges_from(adj)
+    plot_3d(G, Y, angle=angle, save=save, degree=degree)
+
+
 def plot_3d(G,Y, angle=45, save=False, degree=False):
     # Get node positions
     pos = nx.get_node_attributes(G, 'pos3d')
@@ -69,8 +94,7 @@ def plot_3d(G,Y, angle=45, save=False, degree=False):
     
     # Set the initial view
     ax.view_init(30, angle)
-    # Hide the axes
-#     ax.set_axis_off()
+
     n_nodes, n_edges=G.number_of_nodes(), G.number_of_edges()
     cbar=fig.colorbar(plt.cm.ScalarMappable(norm=mpl.colors.Normalize(), cmap=plt.cm.plasma), ax=ax, shrink=0.8)
     ax.set(xlabel='dom_x', ylabel='dom_y', zlabel='dom_z')
@@ -82,23 +106,6 @@ def plot_3d(G,Y, angle=45, save=False, degree=False):
     else:
       plt.show()
     return
-
-def inspect(event=0 ,event_no=None, angle=45, save=False, degree=False, hist=False):
-    dt=load_event(event, event_no)[0]
-    X, A, Y=dt.x, dt.a, dt.y
-    if hist:
-        fig1, ax1=plt.subplots(nrows=1, ncols=5, figsize=(10,4))
-        for i in range(len(X[0])):
-            ax1[i].hist(X[:,i], histtype='step')
-            ax1[i].set(xlabel=features[i], yscale='log')
-        fig1.tight_layout()
-    ix, iy,_=scp.find(A)
-    adj=list(zip(ix,iy))
-    G=nx.Graph()
-    for i in np.arange(len(X[:,0])):
-        G.add_node(i, x=X[i,0], y=X[i,1], z=X[i,2], t=X[i,3], q=X[i,4], pos2d=[X[i,0], X[i,1]] ,pos3d=[X[i,0], X[i,1],X[i,2]])
-    G.add_edges_from(adj)
-    plot_3d(G, Y, angle=angle, save=save, degree=degree)
 
 
 class load_event(Dataset):
