@@ -14,7 +14,7 @@ from tensorflow.sparse import SparseTensor
 
 hidden_states = 8
 activation = LeakyReLU(alpha = 0.1)
-from spektral.layers.ops import sp_matrix_to_sp_tensor
+
 class model(Model):
     def __init__(self, n_out = 3):
         super().__init__()
@@ -31,7 +31,7 @@ class model(Model):
 
     def call(self, inputs, training = False):
         x, a, i = inputs
-        a=sp_matrix_to_sp_tensor(a)
+        # a=sp_matrix_to_sp_tensor(a)
         LayerPreprocess(self.att1)
         LayerPreprocess(self.att2)
         x = self.att1([x,a])
