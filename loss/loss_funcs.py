@@ -48,4 +48,3 @@ def loss_funcxpos(y_reco, y_true, re=False):
         return loss_energy+loss_angle
     else:   
         return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
-
