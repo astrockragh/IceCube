@@ -13,19 +13,23 @@ from spektral.data import Dataset, Graph
 import tensorflow as tf
 
 features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10"]
-# targets  = ["energy_log10", "zenith","azimuth"]
-
-targets  = ["energy_log10", "position_x", "position_y", "position_z", "direction_x", "direction_y", "direction_z"]
+target_angle = ["energy_log10", "zenith","azimuth"]
+target_unit  = ["energy_log10", "direction_x", "direction_y", "direction_z"]
+target_pos  = ["energy_log10", "position_x", "position_y", "position_z", "direction_x", "direction_y", "direction_z"]
 
 class graph_data(Dataset):
     """
     First hopefully working version of the data
     """
 
-    def __init__(self, n_data = None, transform=True, muon = True, skip = 0, n_neighbors = 6, restart=False, train_val_test_split = [0.8, 0.1, 0.1], **kwargs):
+    def __init__(self, n_data = None, transform=True, unitvec=True, angle=False, pos=False, muon = True, skip = 0, n_neighbors = 6, restart=False, dom_norm=1e3, train_val_test_split = [0.8, 0.1, 0.1], **kwargs):
         self.n_data = n_data
         self.skip   = skip
+        self.dom_norm=dom_norm
         self.n_neighbors = n_neighbors
+        self.unitvec=unitvec
+        self.angle=angle
+        self.pos=pos
         if sum(train_val_test_split) != 1:
             sys.exit("Total splits must add up to 1")
         self.train_size, self.val_size, self.test_split = train_val_test_split
@@ -75,7 +79,14 @@ class graph_data(Dataset):
                 ""
                 start_id = 0
                 stop_id  = 999999999
-
+            if self.unitvec:
+                targets=target_unit
+            if self.angle:
+                targets=target_angle 
+            if self.pos:
+                targets=target_pos
+            if self.unitvec==self.angle==1 or self.unitvec==self.pos==1 or self.pos==self.angle==1:
+                print('Multiple selections made')
             # SQL queries format
             feature_call = ", ".join(features)
             target_call  = ", ".join(targets)
@@ -93,7 +104,7 @@ class graph_data(Dataset):
 
 
                 for col in ["dom_x", "dom_y", "dom_z"]:
-                    df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T
+                    df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
 
                 for col in df_targ.columns:
                     # print(col)
@@ -110,7 +121,7 @@ class graph_data(Dataset):
             xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
 
             ys          = np.array(df_targ)
-
+            print(df_feat.head())
             print(df_targ.head())
 
             # Generate adjacency matrices
