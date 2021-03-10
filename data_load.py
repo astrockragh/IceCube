@@ -13,7 +13,9 @@ from spektral.data import Dataset, Graph
 import tensorflow as tf
 
 features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10"]
-targets  = ["energy_log10", "zenith","azimuth"]
+# targets  = ["energy_log10", "zenith","azimuth"]
+
+targets  = ["energy_log10", "position_x", "position_y", "position_z", "direction_x", "direction_y", "direction_z"]
 
 class graph_data(Dataset):
     """
@@ -63,8 +65,8 @@ class graph_data(Dataset):
             try:
                 if self.muon:
                     print('Loading Muons')
-                    start_id = conn.execute(f"select distinct event_no from features where event_no > 138674340 limit 1 offset {self.skip}").fetchall()[0][0]
-                    stop_id  = conn.execute(f"select distinct event_no from features where event_no > 138674340 limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
+                    start_id = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip}").fetchall()[0][0]
+                    stop_id  = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
                 else:
                     print('Loading Neutrinos')
                     start_id = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip}").fetchall()[0][0]
@@ -90,10 +92,11 @@ class graph_data(Dataset):
                 trans_y      = transformers['truth']
 
 
-                for col in df_feat.columns:
+                for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T
 
                 for col in df_targ.columns:
+                    # print(col)
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
             
@@ -108,15 +111,17 @@ class graph_data(Dataset):
 
             ys          = np.array(df_targ)
 
-
+            print(df_targ.head())
 
             # Generate adjacency matrices
             print("Generating adjacency matrices")
             graph_list = []
             for x, y in tqdm(zip(xs, ys), total = len(xs)):
-                a = knn(x[:, :3], self.n_neighbors)
+                try:
+                    a = knn(x[:, :3], self.n_neighbors)
+                except:
+                    a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
 
-                
 
                 graph_list.append(Graph(x = x, a = a, y = y))
 

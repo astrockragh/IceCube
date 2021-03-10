@@ -20,7 +20,7 @@ activation = LeakyReLU(alpha = 0.1)
 # Probably needs regularization, but first step is just to fit, then we will regularize.
 
 class model(Model):
-    def __init__(self, n_out = 3):
+    def __init__(self, n_out = 7):
         super().__init__()
         # Define layers of the model
         self.ECC1    = ECCConv(hidden_states, [hidden_states, hidden_states, hidden_states], n_out = hidden_states, activation = "relu")
@@ -51,6 +51,7 @@ class model(Model):
           x = activation(decode_layer(x))
           x = norm_layer(x, training = training)
         x = self.d2(x)
+        # tf.print(tf.shape(x))
         return x
 
     def generate_edge_features(self, x, a):

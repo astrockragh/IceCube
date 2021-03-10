@@ -16,10 +16,10 @@ hidden_states = 16
 activation = LeakyReLU(alpha = 0.1)
 
 class model(Model):
-    def __init__(self, n_out = 3):
+    def __init__(self, n_out = 4):
         super().__init__()
         # Define layers of the model
-        self.att1 = GATConv(hidden_states, attn_heads=2, dropout_rate=0.4, activation = "relu", return_attn_coef=True) #required keywords is channels/hidden states
+        self.att1 = GATConv(hidden_states, attn_heads=2, dropout_rate=0.4, activation = "relu", return_attn_coef=False) #required keywords is channels/hidden states
         self.att2 = GATConv(hidden_states//2, attn_heads=3, dropout_rate=0.1, activation = "relu")# attn heads are the time limiting key_word, watch out with it
         self.att3 = GATConv(hidden_states*2, attn_heads=4, dropout_rate=0.7, activation = "relu")  # hiddenstates has to be pretty low as well
         self.Pool1   = GlobalAvgPool() #good results with all three
@@ -34,7 +34,8 @@ class model(Model):
         # a=sp_matrix_to_sp_tensor(a)
         LayerPreprocess(self.att1)
         LayerPreprocess(self.att2)
-        x, alpha = self.att1([x,a])
+        # x, alpha = self.att1([x,a])
+        x = self.att1([x,a])
         x = self.att2([x, a])
         x = self.att3([x,a])
         x1 = self.Pool1([x, i])
@@ -47,4 +48,6 @@ class model(Model):
           x = activation(decode_layer(x))
           x = norm_layer(x, training = training)
         x = self.d2(x)
-        return x, alpha
+        # return x, alpha
+        # tf.print(tf.shape(x))
+        return x
