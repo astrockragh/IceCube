@@ -28,9 +28,39 @@ import spektral
 from spektral.data import DisjointLoader, BatchLoader, SingleLoader
 from importlib import reload
 import winsound
-import dill, wandb
 import datetime as dt
+
+################################################
+# Setup Deafult Variables and Hyperparams    #   #this should be made into a loadable JSON
+################################################
+
+# scenarios=[]
+# for scenario in scenarios:
+
+model = 
+learning_rate = 5e-4
+batch_size    = 512
+epochs        = 20
+n_data       = 1e5
+scenario    = "hpc_test"
+patience = 5
 wandblog=0
+
+hidden_states = 'N/A'
+forward       = False
+dropout       = 'None'
+loss_method   = "loss_func_linear_angle"
+n_neighbors   = 6 # SKRIV SELV IND
+
 if wandblog:
+    import wandb
     !wandb login b5b917a9390932e56fccfcbff6f528ccd85c44bf
-run_counter=0
+
+import data_load as dl
+graph_data=dl.graph_data
+dataset=graph_data(n_data=n_data, restart=1, pos=1)
+idx_lists = dataset.index_lists
+# Split data
+dataset_train = dataset[idx_lists[0]]
+dataset_val   = dataset[idx_lists[1]]
+dataset_test  = dataset[idx_lists[2]]

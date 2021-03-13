@@ -1,6 +1,11 @@
 import numpy as np
 import os, sqlite3, pickle, sys, gzip, shutil, time
-from tqdm.notebook import tqdm
+if hasattr(__builtins__,'__IPYTHON__'):
+    print('Notebook')
+    from tqdm.notebook import tqdm
+else:
+    print('Not notebook')
+    from tqdm import tqdm
 import os.path as osp
 
 from pandas import read_sql, concat
@@ -11,6 +16,7 @@ import matplotlib.pyplot as plt
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 from spektral.data import Dataset, Graph
 import tensorflow as tf
+from scipy.sparse import csr_matrix
 
 features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10"]
 target_angle = ["energy_log10", "zenith","azimuth"]
@@ -87,14 +93,15 @@ class graph_data(Dataset):
                 targets=target_pos
             if self.unitvec==self.angle==1 or self.unitvec==self.pos==1 or self.pos==self.angle==1:
                 print('Multiple selections made')
+                
             # SQL queries format
             feature_call = ", ".join(features)
             target_call  = ", ".join(targets)
 
             # Load data from db-file
             print("Reading files")
-            df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-            df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+            df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
+            df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
             df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
             
             if self.transform:
