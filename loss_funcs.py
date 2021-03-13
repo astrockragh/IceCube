@@ -92,7 +92,7 @@ def abs_vonMises_unit(y_reco, y_true, re=False):
     kappa=tf.math.abs(y_reco[:,4])
 #     tf.print(tf.reduce_mean(kappa))
     cos_alpha=cos_unit(y_reco, y_true)
-    nlogC = - tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(  -kappa) )
+    nlogC = - tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(-kappa) )
 
     loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
     if not re:
