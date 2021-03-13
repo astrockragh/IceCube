@@ -5,19 +5,21 @@ naming convention: energy loss method_angle loss method_unitvec/angle '''
 
 import tensorflow as tf
 import numpy as np
+from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
 
-####  Define useful function ####
+####  Define useful function #### 
+#best watch that these are right
 
 def cos_angle(y_reco, y_true):
-    from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract
     zep, zet, azp, azt = y_reco[:,1], y_true[:,1], y_reco[:,2], y_true[:,2]
-    alpha=abs(sin(zep))*cos(azp)*sin(zet)*cos(azt)+abs(sin(zep))*sin(azp)*sin(zet)*sin(azt)+cos(zep)*cos(zet)
-    return alpha
+    # cosalpha=abs(sin(zep))*cos(azp)*sin(zet)*cos(azt)+abs(sin(zep))*sin(azp)*sin(zet)*sin(azt)+cos(zep)*cos(zet)
+    cosalpha=abs(sin(zep))*abs(sin(zet))*cos(azp-azt)+cos(zep)*cos(zet) #check for double absolutes
+    return cosalpha
 
 def cos_unit(y_reco, y_true):
     pred, true=y_reco[1:4], y_true[1:4] 
-    alpha=tf.math.divide_no_nan(tf.reduce_sum(pred * true, axis = 1),tf.math.reduce_euclidean_norm(pred, axis = 1) * tf.math.reduce_euclidean_norm(true,  axis = 1))
-    return alpha
+    cosalpha=tf.math.divide_no_nan(tf.reduce_sum(pred * true, axis = 1),tf.math.reduce_euclidean_norm(pred, axis = 1) * tf.math.reduce_euclidean_norm(true,  axis = 1))
+    return cosalpha
 
 #################################################################
 # Absolute error for E, linear alpha for angle                 #
@@ -33,10 +35,10 @@ def abs_linear_unit(y_reco, y_true, re=False):
     
     #angle loss
     
-    cos_angle = cos_unit(y_reco,y_true)
+    cos_alpha = cos_unit(y_reco,y_true)
 
-    cos_angle -= tf.math.sign(cos_angle) * 1e-6
-    loss_angle = reduce_mean(tf.math.acos(cos_angle))
+    cos_alpha -= tf.math.sign(cos_alpha) * 1e-6 #check this, bad fix
+    loss_angle = reduce_mean(tf.math.acos(cos_alpha))
     if not re:
         return loss_energy+loss_angle
     else:   
@@ -67,6 +69,38 @@ def abs_negcos_angle(y_reco, y_true, re=False):
         return loss_energy+loss_angle
     else:   
         return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
+
+#################################################################
+# Absolute error for E, von Mises for angle                    #
+################################################################
+
+def abs_vonMises_angle(y_reco, y_true, re=False):
+    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]) ) )
+    kappa=tf.math.abs(y_reco[:,3])
+#     tf.print(tf.reduce_mean(kappa))
+    cos_alpha=cos_angle(y_reco, y_true)
+    nlogC = - tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(  -kappa) )
+
+    loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
+    if not re:
+        return loss_angle+loss_energy
+    if re:
+        return float(loss_angle+loss_energy), [float(loss_energy), float(loss_angle)]
+
+def abs_vonMises_unit(y_reco, y_true, re=False):
+    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]) ) )
+    kappa=tf.math.abs(y_reco[:,4])
+#     tf.print(tf.reduce_mean(kappa))
+    cos_alpha=cos_unit(y_reco, y_true)
+    nlogC = - tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(  -kappa) )
+
+    loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
+    if not re:
+        return loss_angle+loss_energy
+    if re:
+        return float(loss_angle+loss_energy), [float(loss_energy), float(loss_angle)]
+
+#New/untested below        
 
 def loss_funcxpos2(y_reco, y_true, re=False):
     from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
