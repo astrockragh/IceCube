@@ -1,0 +1,54 @@
+{
+    "experiment": "IceCube",
+    "group":  "GCN_nlayers", 
+
+    "model_name":  "GCN_nlayers",
+    "angle_unitvec": "angle",
+    "wandblog": true,
+
+    "run_params":{
+    "epochs":     100,
+    "batch_size": 512,
+    "early_stop": true,
+    "patience":   20,
+    "lr_schedule": "classic",
+    "learning_rate":   1e-3,
+    "warm_up": 3,
+    "lr_decay": 0.9,
+    "val_epoch":   20,
+    "loss_func": "abs_vonMises_angle",
+    "metrics": "energy_angle",
+    "performance_plot": "performance_e_alpha"
+},
+
+    "hyper_params": {
+        "n_out":           4,
+        "hidden_states":   64,
+        "conv_layers":   0,
+        "conv_activation": "relu",
+        "decode_layers":   3,
+        "decode_activation": "relu",
+        "dropout":         0.1,
+        "regularization": "l2", 
+        "batch_norm":      true,
+        "forward":  true,
+        "edgeconv": 1
+    },
+
+   "data_params":{ 
+    "n_data": 1e6,
+    "graph_construction":       "classic",
+    "muon":             true,
+    "n_neighbors":       6,
+    "data_split":      [0.8, 0.1, 0.1],
+    "restart":   true,
+    "transform_path": "../IceCube/db_files/transformers.pkl",
+    "db_path": "../IceCube/db_files/rasmus_classification_muon_3neutrino_3mio.db",
+    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10"],
+    "targets":    ["energy_log10", "zenith","azimuth"],
+    "skip": 0,
+    "SRT":  1,
+    "database": "MuonGun"
+}
+}
+   

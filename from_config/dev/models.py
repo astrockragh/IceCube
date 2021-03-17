@@ -14,47 +14,56 @@ from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropou
 from tensorflow.keras.activations import tanh
 from tensorflow.sparse import SparseTensor
 
+def no_norm(x, training):
+  return x
+
 # Probably needs regularization, but first step is just to fit, then we will regularize.
-class model(Model):
-    def __init__(self, n_out = 4, hidden_states=64, n_GCN=2, GCN_activation=LeakyReLU(alpha=0.2), decode_activation=LeakyReLU(alpha=0.2), regularize=None, dropout=0.2, forward=True, ECC=True):
+class GCN_nlayers(Model):
+    def __init__(self, n_out = 4, hidden_states=64, conv_layers=2, conv_activation='relu', decode_layers=2, decode_activation='relu', regularization=None, dropout=0.2, batch_norm=True, forward=True, edgeconv=True):
         super().__init__()
         self.n_out=n_out
         self.hidden_states=hidden_states
-        self.conv_activation=GCN_activation
+        self.conv_activation=conv_activation
         self.forward=forward
         self.dropout=dropout
-        self.n_GCN=n_GCN
-        self.ECC=ECC
-        self.regularize=regularize
-        self.decode_activation=decode_activation
+        self.conv_layers=conv_layers
+        self.edgeconv=edgeconv
+        self.regularize=regularization
+        if type(decode_activation)==str:
+          self.decode_activation=tf.keras.activations.get(decode_activation)
+        else:
+          self.decode_activation=decode_activation
+        self.batch_norm=batch_norm
         # Define layers of the model
-        self.ECC=ECC
-        if self.ECC:
+        if self.edgeconv:
           self.ECC1    = ECCConv(hidden_states, [hidden_states, hidden_states, hidden_states], n_out = hidden_states, activation = "relu", kernel_regularizer=self.regularize)
-        self.GCNs     = [GCNConv(hidden_states*int(i), activation=GCN_activation, kernel_regularizer=self.regularize) for i in 2**np.arange(n_GCN)]
+        self.GCNs     = [GCNConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in 2**np.arange(conv_layers)]
         self.Pool1   = GlobalMaxPool()
         self.Pool2   = GlobalAvgPool()
         self.Pool3   = GlobalSumPool()
-        self.decode  = [Dense(i * hidden_states) for i in  2**np.arange(n_GCN)]
+        self.decode  = [Dense(i * hidden_states, activation=decode_activation) for i in  2**np.arange(decode_layers)]
         self.dropout_layers  = [Dropout(dropout) for i in range(len(self.decode))]
-        self.norm_layers  = [BatchNormalization() for i in range(len(self.decode))]
+        if self.batch_norm:
+          self.norm_layers  = [BatchNormalization() for i in range(len(self.decode))]
+        else:
+          self.norm_layers =  [no_norm for i in range(len(self.decode))]
         self.final      = Dense(n_out)
 
-    def get_config(self):
-      return dict(
-          n_out=self.n_out,
-          forward=self.forward,
-          hidden_states=self.hidden_states,
-          conv_activation=self.conv_activation,
-          ECCConv=self.ECC,
-          n_GCN=self.n_GCN,
-          decode_activation=self.decode_activation,
-          dropout=self.dropout,
-          regularization=self.regularize)
+    # def get_config(self):
+    #   return dict(
+    #       n_out=self.n_out,
+    #       forward=self.forward,
+    #       hidden_states=self.hidden_states,
+    #       conv_activation=self.conv_activation,
+    #       ECCConv=self.ECC,
+    #       n_GCN=self.n_GCN,
+    #       decode_activation=self.decode_activation,
+    #       dropout=self.dropout,
+    #       regularization=self.regularize)
 
     def call(self, inputs, training = False):
         x, a, i = inputs
-        if self.ECC:
+        if self.edgeconv:
           a, e    = self.generate_edge_features(x, a)
           x = self.ECC1([x, a, e])
         for GCN_layer in self.GCNs:

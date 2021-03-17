@@ -24,7 +24,7 @@ import warnings
 warnings.filterwarnings("ignore")
 # %matplotlib inline
 
-def inspect(event=0 ,event_no=None, angle=45, save=False, degree=False, hist=False, db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db'):
+def inspect(event=0, muon=True, event_no=None, angle=45, save=False, degree=False, hist=False, transform_path='../db_files', db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db'):
     '''Plot a graph in 3d, where the colour is determined by time and the size of the point is determined by charge.
         Generally, the only thing you need to do is modify the file path to the db_file in load_event.
         Inspect takes an integer (as just event number x in the database), if not given a specific event_no, which is then loaded in.
@@ -32,7 +32,7 @@ def inspect(event=0 ,event_no=None, angle=45, save=False, degree=False, hist=Fal
         degree: if True we colour based on node degree and not ti,e
         hist: if true distributions of node features are shown.
         save should be self-explanatory.'''
-    dt=load_event(event, event_no, db_path=db_path)[0]
+    dt=load_event(event, event_no, db_path=db_path, transform_path=transform_path, muon=muon)[0]
     X, A, Y=dt.x, dt.a, dt.y
     if hist:
         fig1, ax1=plt.subplots(nrows=1, ncols=5, figsize=(10,4))
@@ -113,11 +113,12 @@ class load_event(Dataset):
     just to load event, important part is that you can either just pick an event_no or just an event by just any integer (of course in the set)
     """
 
-    def __init__(self, event=0, event_no=None, transform=True, muon = True, n_neighbors = 6, db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db', restart=True, **kwargs):
+    def __init__(self, event=0, event_no=None, transform=True, muon = True, n_neighbors = 6, transform_path='../db_files', db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db', restart=True, **kwargs):
         self.skip   = event
         self.event_no = event_no
         self.n_neighbors = n_neighbors
         self.seed = 42
+        self.transform_path=transform_path
         self.transform=transform
         self.restart=restart
         self.muon=muon
@@ -181,7 +182,7 @@ class load_event(Dataset):
                 df_targ  = read_sql(f"select {target_call } from truth    where event_no == {self.event_no}", conn)
             
             if self.transform:
-                transformers = pickle.load(open(osp.join(db_folder, "transformers.pkl"), 'rb'))
+                transformers = pickle.load(open(osp.join(self.transform_path, "transformers.pkl"), 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
 
