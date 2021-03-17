@@ -27,8 +27,8 @@ class graph_data(Dataset):
     """
 
     def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10"], targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
-        transform_path='../IceCube/db_files/transformers.pkl',\
-             db_path= '../IceCube/db_files/rasmus_classification_muon_3neutrino_3mio.db',\
+        transform_path='../db_files/muongun/transformers.pkl',\
+             db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
                   n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], SRT=1, graph_construction='classic', database='MuonGun', **kwargs):
 
 
