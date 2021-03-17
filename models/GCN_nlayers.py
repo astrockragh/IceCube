@@ -15,7 +15,7 @@ from tensorflow.keras.activations import tanh
 from tensorflow.sparse import SparseTensor
 
 # Probably needs regularization, but first step is just to fit, then we will regularize.
-class model(Model):
+class GCN_nlayers(Model):
     def __init__(self, n_out = 4, hidden_states=64, n_GCN=2, GCN_activation=LeakyReLU(alpha=0.2), decode_activation=LeakyReLU(alpha=0.2), regularize=None, dropout=0.2, forward=True, ECC=True):
         super().__init__()
         self.n_out=n_out

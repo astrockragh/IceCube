@@ -1,7 +1,7 @@
 ''' Loss functions file 
 
 General setup should be a fn(y_reco, y_true, re), where re keyword gives whether or not individual losses should be returned along with total loss
-naming convention: energy loss method_angle loss method_unitvec/angle '''
+naming convention: EnergyLossMethod_AngleLossMethod_Unitvec/Angle '''
 
 import tensorflow as tf
 import numpy as np
