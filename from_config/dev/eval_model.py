@@ -13,8 +13,9 @@ def metrics_zeniazi(y_reco, y_true):
 
 def alpha_from_angle(y_reco, y_true):
     zep, zet, azp, azt = y_reco[:,1], y_true[:,1], y_reco[:,2], y_true[:,2]
-    # cosalpha=abs(sin(zep))*cos(azp)*sin(zet)*cos(azt)+abs(sin(zep))*sin(azp)*sin(zet)*sin(azt)+cos(zep)*cos(zet)
-    alpha=acos(abs(sin(zep))*abs(sin(zet))*cos(azp-azt)+cos(zep)*cos(zet)) #check for double absolutes
+    cosalpha=abs(sin(zep))*cos(azp)*sin(zet)*cos(azt)+abs(sin(zep))*sin(azp)*sin(zet)*sin(azt)+cos(zep)*cos(zet)
+    cosalpha-=tf.math.sign(cosalpha) * eps
+    alpha=acos(cosalpha)
     return alpha
 
 
