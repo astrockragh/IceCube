@@ -76,13 +76,18 @@ def abs_negcos_angle(y_reco, y_true, re=False):
 ################################################################
 
 def abs_vonMises_angle(y_reco, y_true, re=False):
-    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]) ) )
+    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0])))
+    tf.debugging.assert_all_finite(nlogC, 'Energy problem', name=None)
     kappa=tf.math.abs(y_reco[:,3])+eps
 #     tf.print(tf.reduce_mean(kappa))
     cos_alpha=cos_angle(y_reco, y_true)
-    nlogC = - tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(-kappa))
+    tf.debugging.assert_less_equal(tf.math.abs(cos_alpha), 1, message='cos_alpha problem', summarize=None, name=None)
+    tf.debugging.assert_all_finite(tf.math.abs(cos_alpha), message='cos_alpha problem infinite/nan', name=None)
+    nlogC = - tf.math.log(kappa) + kappa +tf.math.log(1-tf.math.exp(-2*kappa))
+    tf.debugging.assert_all_finite(nlogC, 'log problem', name=None)
 
     loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
+     tf.debugging.assert_all_finite(loss_angle, 'Angle problem', name=None)
     if not re:
         return loss_angle+loss_energy
     if re:
