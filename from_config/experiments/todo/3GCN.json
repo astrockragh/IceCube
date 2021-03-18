@@ -2,7 +2,7 @@
     "experiment": "IceCube",
     "group":  "GCN_nlayers", 
 
-    "model_name":  "GCN_3layers",
+    "model_name":  "GCN_nlayers",
     "angle_unitvec": "angle",
     "wandblog": true,
 
