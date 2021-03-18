@@ -44,7 +44,7 @@
     "restart":   true,
     "transform_path": "../IceCube/db_files/transformers.pkl",
     "db_path": "../IceCube/db_files/rasmus_classification_muon_3neutrino_3mio.db",
-    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10"],
+    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"],
     "targets":    ["energy_log10", "zenith","azimuth"],
     "skip": 0,
     "SRT":  1,

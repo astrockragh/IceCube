@@ -2,7 +2,7 @@
     "experiment": "IceCube",
     "group":  "GCN_nlayers", 
 
-    "model_name":  "GCN_1layers",
+    "model_name":  "GCN_14layers",
     "angle_unitvec": "angle",
     "wandblog": true,
 
@@ -24,7 +24,7 @@
     "hyper_params": {
         "n_out":           4,
         "hidden_states":   64,
-        "conv_layers":   1,
+        "conv_layers":   14,
         "conv_activation": "relu",
         "decode_layers":   3,
         "decode_activation": "relu",

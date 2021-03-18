@@ -5,7 +5,9 @@ naming convention: EnergyLossMethod_AngleLossMethod_Unitvec/Angle '''
 
 import tensorflow as tf
 import numpy as np
-from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
+from tensorflow.math import sin, cos, acos, abs, reduce_mean, reduce_sum, subtract, square
+
+eps=1e-5
 
 ####  Define useful function #### 
 #best watch that these are right
@@ -14,11 +16,13 @@ def cos_angle(y_reco, y_true):
     zep, zet, azp, azt = y_reco[:,1], y_true[:,1], y_reco[:,2], y_true[:,2]
     # cosalpha=abs(sin(zep))*cos(azp)*sin(zet)*cos(azt)+abs(sin(zep))*sin(azp)*sin(zet)*sin(azt)+cos(zep)*cos(zet)
     cosalpha=abs(sin(zep))*abs(sin(zet))*cos(azp-azt)+cos(zep)*cos(zet) #check for double absolutes
+    cosalpha-=tf.math.sign(cosalpha) * eps
     return cosalpha
 
 def cos_unit(y_reco, y_true):
     pred, true=y_reco[1:4], y_true[1:4] 
-    cosalpha=tf.math.divide_no_nan(tf.reduce_sum(pred * true, axis = 1),tf.math.reduce_euclidean_norm(pred, axis = 1) * tf.math.reduce_euclidean_norm(true,  axis = 1))
+    cosalpha=tf.math.divide_no_nan(reduce_sum(pred * true, axis = 1),tf.math.reduce_euclidean_norm(pred, axis = 1) * tf.math.reduce_euclidean_norm(true,  axis = 1))
+    cosalpha-=tf.math.sign(cosalpha) * eps
     return cosalpha
 
 #################################################################
@@ -36,8 +40,6 @@ def abs_linear_unit(y_reco, y_true, re=False):
     #angle loss
     
     cos_alpha = cos_unit(y_reco,y_true)
-
-    cos_alpha -= tf.math.sign(cos_alpha) * 1e-6 #check this, bad fix
     loss_angle = reduce_mean(tf.math.acos(cos_alpha))
     if not re:
         return loss_energy+loss_angle
@@ -60,7 +62,6 @@ def abs_negcos_unit(y_reco, y_true, re=False):
 
 
 def abs_negcos_angle(y_reco, y_true, re=False):
-    from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract
     # Energy loss
     loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0]))) #this works well but could maybe be improved
     # Angle loss

@@ -2,7 +2,7 @@
     "experiment": "IceCube",
     "group":  "GCN_nlayers", 
 
-    "model_name":  "GCN_nlayers",
+    "model_name":  "GCN_0layers",
     "angle_unitvec": "angle",
     "wandblog": true,
 
@@ -15,7 +15,7 @@
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   20,
+    "val_epoch":   10,
     "loss_func": "abs_vonMises_angle",
     "metrics": "energy_angle",
     "performance_plot": "performance_e_alpha"
@@ -41,10 +41,10 @@
     "muon":             true,
     "n_neighbors":       6,
     "data_split":      [0.8, 0.1, 0.1],
-    "restart":   false,
+    "restart":   true,
     "transform_path": "../db_files/muongun/transformers.pkl",
     "db_path": "../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db",
-    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10"],
+    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"],
     "targets":    ["energy_log10", "zenith","azimuth"],
     "skip": 0,
     "SRT":  1,
