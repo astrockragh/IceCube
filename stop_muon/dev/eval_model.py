@@ -6,8 +6,6 @@ from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
 import warnings
 warnings.filterwarnings("ignore")
 
-eps=1e-5
-
 def metrics_zeniazi(y_reco, y_true):
     w_zeni=180/np.pi*tfp.stats.percentile(tf.math.abs(tf.subtract(y_true[:, 1], y_reco[:, 1]%(np.pi/2))),[50-34, 50, 50+34, 68])
     w_azi=180/np.pi*tfp.stats.percentile(tf.math.abs(tf.subtract(y_true[:, 2], y_reco[:, 2]%(np.pi*2))),[50-34, 50, 50+34, 68])
