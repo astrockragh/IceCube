@@ -46,7 +46,7 @@
     "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"],
     "targets":    ["energy_log10", "zenith","azimuth"],
     "skip": 0,
-    "SRT":  1,
+    "SRT": 0,
     "database": "MuonGun"
 }
 }
