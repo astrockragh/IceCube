@@ -13,6 +13,13 @@ def list_experiments():
     experiment_files  = os.listdir(experiment_folder)
     return experiment_folder, experiment_files
 
+def clean_done():
+    experiment_folder = osp.join(cwd, "experiments/done") 
+    files  = os.listdir(experiment_folder)
+    for f in files:
+        shutil.move(osp.join(experiment_folder,f), 'experiments/legacy/')
+    print('Cleaned done folder')
+
 def check_dataset(database='MuonGun', muon=True, n_data=1e4, graph_construction='classic'):
     """
     Check if a given dataset is generated, else initiate the process

@@ -36,7 +36,7 @@
     },
 
    "data_params":{ 
-    "n_data": 1e6,
+    "n_data": 1e3,
     "graph_construction":       "classic",
     "muon":             true,
     "n_neighbors":       6,

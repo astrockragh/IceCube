@@ -18,25 +18,21 @@ from spektral.data import Dataset, Graph
 from scipy.sparse import csr_matrix
 
 # features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"]
-target_angle = ["energy_log10", "zenith","azimuth"]
-target_unitvec  = ["energy_log10", "direction_x", "direction_y", "direction_z"]
+targets = ["stopped_muon"]
 
 class graph_data(Dataset):
     """
     data that takes config file
     """
 
-    def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
+    def __init__(self, n_data = 2e6 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"],\
         transform_path='../db_files/muongun/transformers.pkl',\
              db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], SRT=1, graph_construction='classic', database='MuonGun', **kwargs):
+                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
 
 
         self.n_data = int(n_data)
         self.features=features
-        self.targets=targets
-        self.muon=muon
-        self.skip   = skip
         self.dom_norm = 1e3
         self.transform_path=transform_path
         self.db_path=db_path
@@ -46,7 +42,6 @@ class graph_data(Dataset):
         self.train_size, self.val_size, self.test_split = data_split
         self.seed = 42
         self.restart=restart
-        self.SRT=SRT
         self.graph_construction=graph_construction
         self.database=database
         self.k=0
@@ -58,7 +53,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.database}_muon_{self.muon}_n_data_{self.n_data}_type_{self.graph_construction}")
+        path = osp.join(cwd, f"processed/{self.database}_n_data_{self.n_data}_type_{self.graph_construction}")
         return path
 
     def reload(self):
@@ -79,46 +74,23 @@ class graph_data(Dataset):
 
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
-                # Find indices to cut after
-                try:
-                    if self.muon:
-                        print('Loading Muons')
-                        start_id = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip}").fetchall()[0][0]
-                        stop_id  = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
-                    else:
-                        print('Loading Neutrinos')
-                        start_id = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip}").fetchall()[0][0]
-                        stop_id  = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
-                except:
-                    ""
-                    start_id = 0
-                    stop_id  = 100
-                # SQL queries format
+
                 feature_call = ", ".join(self.features)
-                target_call  = ", ".join(self.targets)
                 
                 # Load data from db-file
                 print("Reading files")
-                if self.SRT:
-                    df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
-                    df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
-                    df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
-                else:
-                    df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                    df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                    df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
+
+                df_event = read_sql(f'select event_no from truth where pid=13 limit {self.n_data}', conn)
+                df_feat  = read_sql(f'select {feature_call} from features where event_no>=138674340 limit {self.n_data}', conn)
+                df_targ  = read_sql(f'select stopped_muon from truth where pid=13 limit {self.n_data}', conn)
+
                 
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
-                trans_y      = transformers['truth']
 
 
                 for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
-
-                for col in df_targ.columns:
-                    # print(col)
-                    df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
             
 

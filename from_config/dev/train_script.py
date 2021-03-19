@@ -21,7 +21,7 @@ def train_model(construct_dict):
     if wandblog:
         import wandb
         run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict)
-        wandb.run.name = construct_dict['model_name']+wandb.run.id
+        wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']
     
     ################################################
     #   Load dataset                              #
@@ -62,7 +62,7 @@ def train_model(construct_dict):
     metrics               = get_metrics(construct_dict['run_params']['metrics'])
     performance_plot      = get_performance(construct_dict['run_params']['performance_plot'])
     lr_schedule          = get_lr_schedule(construct_dict)
-    save_path=model_path+wandb.run.name
+    save_path=osp.join(model_path,wandb.run.name)
 
     if not osp.isdir(save_path):
         os.makedirs(save_path)
@@ -163,11 +163,11 @@ def train_model(construct_dict):
             if wandblog:
                 wandb.log({"Train Loss":      loss / loader_train.steps_per_epoch,
                         "Validation Loss": val_loss, 
-                        "Energy metric":   val_metric[2][0],
+                        "Old energy metric":   val_metric[2][0],
                         "Energy bias":   val_metric[0][1],
                         "Energy sig-1":   val_metric[0][0],
                         "Energy sig+1":   val_metric[0][2],
-                        "Angle metric":    val_metric[2][1],
+                        "Old angle metric":    val_metric[2][1],
                         "Angle bias":   val_metric[1][1],
                         "Angle sig-1":   val_metric[1][0],
                         "Angle sig+1":   val_metric[1][2],

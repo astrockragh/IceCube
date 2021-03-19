@@ -9,8 +9,8 @@ warnings.filterwarnings("ignore")
 eps=1e-5
 
 def metrics_zeniazi(y_reco, y_true):
-    w_zeni=180/np.pi*tfp.stats.percentile(tf.math.abs(tf.subtract(y_true[:, 1], y_reco[:, 1]%(np.pi/2))),[50-34, 50, 50+34, 68])
-    w_azi=180/np.pi*tfp.stats.percentile(tf.math.abs(tf.subtract(y_true[:, 2], y_reco[:, 2]%(np.pi*2))),[50-34, 50, 50+34, 68])
+    w_zeni=180/np.pi*tfp.stats.percentile(tf.math.abs(acos(cos(y_true[:, 1]-y_reco[:, 1]))),[50-34, 50, 50+34, 68])
+    w_azi=180/np.pi*tfp.stats.percentile(tf.math.abs(acos(cos(y_true[:, 2]-y_reco[:, 2]))),[50-34, 50, 50+34, 68])
     return w_zeni, w_azi
 
 def alpha_from_angle(y_reco, y_true):
@@ -66,7 +66,7 @@ def performance_e_alpha(loader, test_step, metrics, save=False, save_path=''):
         azimuth.append(azi)
     zenith, azimuth =  np.array(zenith), np.array(azimuth)
     fig, ax = plt.subplots(ncols = 3, nrows = 4, figsize = (12, 20))
-    axesback=[(0,0), (0,1), (1,0), (1,1), (2,0), (3,0)]
+    axesback=[(0,0), (1,0), (2,0), (3,0)]
     for i,j in axesback:
         a_ = ax[i][j].twinx()
         a_.step(xs, counts, color = "gray", zorder = 10, alpha = 0.7, where = "mid")
@@ -79,31 +79,45 @@ def performance_e_alpha(loader, test_step, metrics, save=False, save_path=''):
     ax_top = ax[0]
 
     ax_top[0].errorbar(xs, w_energies,yerr=np.array(e_sig).T, fmt='k.',capsize=2,linewidth=1,ecolor='r',label='data')
+    ax_top[0].plot(xs, old_energy, 'bo', label=r"$w(\Delta log(E))$"+'(old metric)')
     ax_top[0].set_title("Energy Performance")
     ax_top[0].set_ylabel(r"$\Delta log(E)$")
 
-    ax_top[1].plot(xs, old_energy, 'bo')
-    ax_top[1].set_title("Energy Performance (old metric)")
-    ax_top[1].set_ylabel(r"$w(\Delta log(E))$")
+    # pull_e=(y_reco[:,0]-tf.reduce_mean(y_reco[:,0]))*np.sqrt(np.abs(y_reco[:,3]))
+    # ax_top[1].hist(pull_e, label='Pull plot', bins=50, histtype='step')
+    # ax_top[1].set_title("Solid angle pull plot)")
+    # ax_top[1].set_title("Energy Performance (old metric)")
+    # ax_top[1].set_ylabel(r"$w(\Delta log(E))$")
 
-    ax_top[2].hist2d(y_true[:,0], y_reco[:,0], bins=100,\
+    ax_top[1].hist2d(y_true[:,0], y_reco[:,0], bins=100,\
                    range=[np.percentile(y_true[:,0],[1,99]), np.percentile(y_reco[:,0],[1,99])])
-    ax_top[2].set_title("ML Reco/True")
-    ax_top[2].set(xlabel="Truth (log(E))", ylabel="ML Reco (log(E))")
+    ax_top[1].set_title("ML Reco/True")
+    ax_top[1].set(xlabel="Truth (log(E))", ylabel="ML Reco (log(E))")
 
+    ax_top[2].hist2d(np.abs(y_reco[:,3]), y_reco[:,0], bins=100, \
+                   range=[np.percentile(np.abs(y_reco[:,3]),[1,99]), np.percentile(y_reco[:,0],[1,99])])
+    ax_top[2].set_title("ML Kappa correlation with Energy error")
+    ax_top[2].set(xlabel=r"$\kappa$", ylabel=r"$\Delta E$")
+    for axi in ax_top:
+        axi.legend()
+    #Zenith reconstructi
 
     # Alpha reconstruction
     ax_m=ax[1]
 
     ax_m[0].errorbar(xs, u_angles,yerr=np.array(alpha_sig).T, fmt='k.',capsize=2,linewidth=1,ecolor='r',label=r'Median $\pm \sigma$')
-    ax_m[0].set_title("Angle Performance")
+    ax_m[0].plot(xs, old_alpha, 'bo', label=r"$w(\Omega)$"+'(old metric)')
+    ax_m[0].set_title("Angle Performance") 
     ax_m[0].set_ylabel(r"$\Delta \Omega$")
-
-    ax_m[1].plot(xs, old_alpha, 'bo')
-    ax_m[1].set_title("Angle performance (old metric)")
-    ax_m[1].set_ylabel(r"$w(\Omega)$")
-
+    
     alphas=alpha_from_angle(y_reco, y_true)
+
+    pull_alpha=np.array(alphas-tf.reduce_mean(alphas))*np.sqrt(np.abs(y_reco[:,3]))
+    pull_alpha=np.reshape(pull_alpha, -1)
+    ax_m[1].hist(pull_alpha, label='Pull plot', bins=50, histtype='step')
+    ax_m[1].set_title("Solid angle pull plot)")
+    # ax_m[1].set_ylabel(r"$w(\Omega)$")
+
     
     ax_m[2].hist2d(np.abs(y_reco[:,3]), alphas, bins=100, \
                    range=[np.percentile(np.abs(y_reco[:,3]),[1,99]), np.percentile(alphas,[1,99])])

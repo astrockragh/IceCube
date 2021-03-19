@@ -14,6 +14,8 @@ from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization, Dropou
 from tensorflow.keras.activations import tanh
 from tensorflow.sparse import SparseTensor
 
+print('loading model')
+
 def no_norm(x, training):
   return x
 
@@ -37,11 +39,11 @@ class GCN_nlayers(Model):
         # Define layers of the model
         if self.edgeconv:
           self.ECC1    = ECCConv(hidden_states, [hidden_states, hidden_states, hidden_states], n_out = hidden_states, activation = "relu", kernel_regularizer=self.regularize)
-        self.GCNs     = [GCNConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in 2**np.arange(conv_layers)]
+        self.GCNs     = [GCNConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in np.arange(self.conv_layers)]
         self.Pool1   = GlobalMaxPool()
         self.Pool2   = GlobalAvgPool()
         self.Pool3   = GlobalSumPool()
-        self.decode  = [Dense(i * hidden_states, activation=decode_activation) for i in  2**np.arange(decode_layers)]
+        self.decode  = [Dense(i * hidden_states, activation=self.decode_activation) for i in  2**np.arange(decode_layers)]
         self.dropout_layers  = [Dropout(dropout) for i in range(len(self.decode))]
         if self.batch_norm:
           self.norm_layers  = [BatchNormalization() for i in range(len(self.decode))]
