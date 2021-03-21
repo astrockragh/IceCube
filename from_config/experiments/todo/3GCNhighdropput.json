@@ -28,7 +28,7 @@
         "conv_activation": "relu",
         "decode_layers":   3,
         "decode_activation": "relu",
-        "dropout":         0.1,
+        "dropout":         0.5,
         "regularization": "l2", 
         "batch_norm":      true,
         "forward":  true,

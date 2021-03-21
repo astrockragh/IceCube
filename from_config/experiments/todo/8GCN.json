@@ -24,7 +24,7 @@
     "hyper_params": {
         "n_out":           4,
         "hidden_states":   64,
-        "conv_layers":   3,
+        "conv_layers":   6,
         "conv_activation": "relu",
         "decode_layers":   3,
         "decode_activation": "relu",

@@ -39,7 +39,7 @@ class GCN_nlayers(Model):
         # Define layers of the model
         if self.edgeconv:
           self.ECC1    = ECCConv(hidden_states, [hidden_states, hidden_states, hidden_states], n_out = hidden_states, activation = "relu", kernel_regularizer=self.regularize)
-        self.GCNs     = [GCNConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in np.arange(self.conv_layers)]
+        self.GCNs     = [GCNConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in 2**np.arange(self.conv_layers)]
         self.Pool1   = GlobalMaxPool()
         self.Pool2   = GlobalAvgPool()
         self.Pool3   = GlobalSumPool()

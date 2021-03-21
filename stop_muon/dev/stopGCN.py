@@ -17,9 +17,8 @@ from tensorflow.sparse import SparseTensor
 def no_norm(x, training):
   return x
 
-# Probably needs regularization, but first step is just to fit, then we will regularize.
-class GCN_nlayers(Model):
-    def __init__(self, n_out = 4, hidden_states=64, conv_layers=2, conv_activation='relu', decode_layers=2, decode_activation='relu', regularization=None, dropout=0.2, batch_norm=True, forward=True, edgeconv=True):
+class stopGCN(Model):
+    def __init__(self, n_out = 1, hidden_states=64, conv_layers=2, conv_activation='relu', decode_layers=2, decode_activation='relu', regularization=None, dropout=0.2, batch_norm=True, forward=True, edgeconv=True):
         super().__init__()
         self.n_out=n_out
         self.hidden_states=hidden_states

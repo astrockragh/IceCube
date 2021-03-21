@@ -74,15 +74,23 @@ class graph_data(Dataset):
 
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
+                        # Find indices to cut after
+                try:
+                    print('Loading Muons')
+                    start_id = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {0}").fetchall()[0][0]
+                    stop_id  = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.n_data}").fetchall()[0][0]
+                except:
+                    start_id = 0
+                    stop_id  = 100
 
                 feature_call = ", ".join(self.features)
                 
                 # Load data from db-file
                 print("Reading files")
 
-                df_event = read_sql(f'select event_no from truth where pid=13 limit {self.n_data}', conn)
-                df_feat  = read_sql(f'select {feature_call} from features where event_no>=138674340 limit {self.n_data}', conn)
-                df_targ  = read_sql(f'select stopped_muon from truth where pid=13 limit {self.n_data}', conn)
+                df_event = read_sql(f'select event_no from features where event_no>={start_id} and event_no < {stop_id}', conn)
+                df_feat  = read_sql(f'select {feature_call} from features where event_no>={start_id} and event_no < {stop_id}', conn)
+                df_targ  = read_sql(f'select stopped_muon from truth where event_no>={start_id} and event_no < {stop_id}', conn)
 
                 
                 transformers = pickle.load(open(self.transform_path, 'rb'))
@@ -91,21 +99,22 @@ class graph_data(Dataset):
 
                 for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
-            
+
             
 
                 # Cut indices
                 print("Splitting data to events")
                 idx_list    = np.array(df_event)
+
                 x_not_split = np.array(df_feat)
 
                 _, idx, counts = np.unique(idx_list.flatten(), return_index = True, return_counts = True) 
+                print(counts)
                 xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
 
                 ys          = np.array(df_targ)
                 print(df_feat.head())
                 print(df_targ.head())
-
                 # Generate adjacency matrices
                 print("Generating adjacency matrices")
                 graph_list = []
@@ -115,7 +124,6 @@ class graph_data(Dataset):
                     except:
                         a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
 
-
                     graph_list.append(Graph(x = x, a = a, y = y))
 
                 graph_list = np.array(graph_list, dtype = object)
@@ -123,8 +131,6 @@ class graph_data(Dataset):
 
                 print("Saving dataset")
                 pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
-        else:
-            pass
         
     def read(self):
         if self.restart and self.k==0:
