@@ -58,10 +58,10 @@ tf.__version__, spektral.__version__
 learning_rate = 2.5e-4
 warm_up       = 4
 batch_size    = 512
-epochs        = 20
-n_data       = 1e4
-scenario    = "probreg_test"
-patience = 5
+epochs        = 100
+n_data       = 1e6
+scenario    = "probreg_big"
+patience = 20
 angleunit = 'angle'
 
 ################################################
@@ -117,7 +117,7 @@ if wandblog:
 import data_load as dl
 reload(dl)
 graph_data=dl.graph_data
-dataset=graph_data(n_data=n_data, restart=0, transform=True, angle=True, unitvec=False)
+dataset=graph_data(n_data=n_data, restart=1, transform=True, angle=True, unitvec=False)
 idx_lists = dataset.index_lists
 # Split data
 dataset_train = dataset[idx_lists[0]]
