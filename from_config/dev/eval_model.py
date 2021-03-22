@@ -93,9 +93,9 @@ def performance_e_alpha(loader, test_step, metrics, save=False, save_path=''):
                    range=[np.percentile(y_true[:,0],[1,99]), np.percentile(y_reco[:,0],[1,99])])
     ax_top[1].set_title("ML Reco/True")
     ax_top[1].set(xlabel="Truth (log(E))", ylabel="ML Reco (log(E))")
-
-    ax_top[2].hist2d(np.abs(y_reco[:,3]), y_reco[:,0], bins=100, \
-                   range=[np.percentile(np.abs(y_reco[:,3]),[1,99]), np.percentile(y_reco[:,0],[1,99])])
+    res_e=abs(y_true[:,0]-y_reco[:,0])
+    ax_top[2].hist2d(np.abs(y_reco[:,3]), res_e, bins=100, \
+                   range=[np.percentile(np.abs(y_reco[:,3]),[1,99]), np.percentile(res_e,[1,99])])
     ax_top[2].set_title("ML Kappa correlation with Energy error")
     ax_top[2].set(xlabel=r"$\kappa$", ylabel=r"$\Delta E$")
     for axi in ax_top:

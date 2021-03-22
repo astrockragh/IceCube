@@ -20,7 +20,7 @@ def train_model(construct_dict):
     wandblog=construct_dict["wandblog"]
     if wandblog:
         import wandb
-        run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict)
+        run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict, reinit=True)
         wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']
     
     ################################################

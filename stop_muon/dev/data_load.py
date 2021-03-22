@@ -109,7 +109,6 @@ class graph_data(Dataset):
                 x_not_split = np.array(df_feat)
 
                 _, idx, counts = np.unique(idx_list.flatten(), return_index = True, return_counts = True) 
-                print(counts)
                 xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
 
                 ys          = np.array(df_targ)
