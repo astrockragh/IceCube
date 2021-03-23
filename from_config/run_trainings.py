@@ -6,11 +6,12 @@ from tensorflow.keras.backend import clear_session
 
 import tensorflow as tf
 
-gpu_devices = tf.config.list_physical_devices('GPU') 
-if len(gpu_devices) > 0:
-    print("GPU detected")
-    tf.config.experimental.set_memory_growth(gpu_devices[0], True)
+# gpu_devices = tf.config.list_physical_devices('GPU') 
+# if len(gpu_devices) > 0:
+#     print("GPU detected")
+#     tf.config.experimental.set_memory_growth(gpu_devices[0], True)
 
+folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 SHUTDOWN = False
 ##########################################################
@@ -20,9 +21,9 @@ SHUTDOWN = False
 # Generate list over experiments to run
 from dev.utils import list_experiments, clean_done, check_dataset
 from dev.train_script import train_model
-exp_folder, exp_list = list_experiments()
+exp_folder, exp_list = list_experiments(folder)
 
-clean_done()
+clean_done(folder)
 
 print(f"Starting process with {len(exp_list)} experiments")
 print(exp_list)

@@ -4,6 +4,7 @@ processed
 db_files
 wandb.ipynb
 wandb
+input.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
