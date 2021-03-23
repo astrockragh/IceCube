@@ -11,7 +11,7 @@ import tensorflow as tf
 #     print("GPU detected")
 #     tf.config.experimental.set_memory_growth(gpu_devices[0], True)
 
-folder = str(sys.argv[1])
+exp_folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 SHUTDOWN = False
 ##########################################################
@@ -21,9 +21,8 @@ SHUTDOWN = False
 # Generate list over experiments to run
 from dev.utils import list_experiments, clean_done, check_dataset
 from dev.train_script import train_model
-exp_folder, exp_list = list_experiments(folder)
-
-clean_done(folder)
+clean_done(exp_folder)
+exp_folder, exp_list = list_experiments(exp_folder)
 
 print(f"Starting process with {len(exp_list)} experiments")
 print(exp_list)

@@ -20,8 +20,8 @@ def train_model(construct_dict):
     wandblog=construct_dict["wandblog"]
     if wandblog:
         import wandb
-        run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict, reinit=True)
-        wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']
+        run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict, reinit=True, settings=wandb.Settings(start_method="fork"))
+        wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']+'_'+str(wandb.run.id)
     
     ################################################
     #   Load dataset                              #
@@ -116,9 +116,9 @@ def train_model(construct_dict):
 
         loss, loss_from = loss_func(y_reco, y_true, re=True)
         
-        energy, angle, old= metrics(y_reco, y_true)
+        energy, e_old, alpha, zeni, azi= metrics(y_reco, y_true)
         
-        return loss, loss_from, [energy, angle, old]
+        return loss, loss_from, [energy, e_old, alpha, zeni, azi]
 
 
 
@@ -163,20 +163,36 @@ def train_model(construct_dict):
             if wandblog:
                 wandb.log({"Train Loss":      loss / loader_train.steps_per_epoch,
                         "Validation Loss": val_loss, 
-                        "Old energy metric":   val_metric[2][0],
+                        "w(log(E))":   val_metric[1],
                         "Energy bias":   val_metric[0][1],
                         "Energy sig-1":   val_metric[0][0],
                         "Energy sig+1":   val_metric[0][2],
-                        "Old angle metric":    val_metric[2][1],
-                        "Angle bias":   val_metric[1][1],
-                        "Angle sig-1":   val_metric[1][0],
-                        "Angle sig+1":   val_metric[1][2],
+                        "Solid angle 68th":    val_metric[2][3],
+                        "Angle bias":   val_metric[2][1],
+                        "Angle sig-1":   val_metric[2][0],
+                        "Angle sig+1":   val_metric[2][2],
+                        "zenith 68th":    val_metric[3][3],
+                        "zenith bias":   val_metric[3][1],
+                        "zenith sig-1":   val_metric[3][0],
+                        "zenith sig+1":   val_metric[3][2],
+                        "azimuth 68th":    val_metric[4][3],
+                        "azimuth bias":   val_metric[4][1],
+                        "azimuth sig-1":   val_metric[4][0],
+                        "azimuth sig+1":   val_metric[4][2],
                         "Learning rate":   learning_rate})
-
-            print(f"Avg loss of validation: {val_loss:.6f}")
-            print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Angle: {val_loss_from[1]:.6f} ")
-            print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[2][0]:.6f}\
-                \n Angle: bias = {val_metric[1][1]:.6f} sig_range = {val_metric[1][0]:.6f}<->{val_metric[1][2]:.6f}, old metric {val_metric[2][1]:.6f}")
+            print("\n")
+            if not construct_dict['run_params']['zeniazi_metric']:
+                print(f"Avg loss of validation: {val_loss:.6f}")
+                print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Angle: {val_loss_from[1]:.6f} ")
+                print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
+                    \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}")
+            else:
+                print(f"Avg loss of validation: {val_loss:.6f}")
+                print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Angle: {val_loss_from[1]:.6f} ")
+                print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
+                    \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
+                    \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\
+                    \n Azimuth: bias = {val_metric[4][1]:.6f} sig_range = {val_metric[4][0]:.6f}<->{val_metric[4][2]:.6f}, old metric {val_metric[4][3]:.6f}")
 
             if val_loss < lowest_loss:
                 early_stop_counter = 0
@@ -201,7 +217,7 @@ def train_model(construct_dict):
                 print("Model saved")
                 if wandblog:
                     loader_test = DisjointLoader(dataset_test, batch_size=batch_size, epochs=1)
-                    fig, ax = performance_plot(loader_test, test_step, metrics, save=True, save_path=save_path)
+                    fig, _ = performance_plot(loader_test, test_step, metrics, save=True, save_path=save_path)
                     title="performanceplot_"+str(current_epoch)
                     wandb.log({title: [wandb.Image(fig, caption=title)]})
         

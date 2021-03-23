@@ -35,7 +35,7 @@ def check_dataset(database='MuonGun', muon=True, n_data=1e4, graph_construction=
     """
     n_data=int(n_data)
     data = osp.join(cwd, f"processed/{database}_muon_{muon}_n_data_{n_data}_type_{graph_construction}/data.dat")
-    return osp.exists(data
+    return osp.exists(data)
 
 
 
