@@ -6,10 +6,11 @@ from tensorflow.keras.backend import clear_session
 
 import tensorflow as tf
 
-# gpu_devices = tf.config.list_physical_devices('GPU') 
-# if len(gpu_devices) > 0:
-#     print("GPU detected")
-#     tf.config.experimental.set_memory_growth(gpu_devices[0], True)
+gpu_devices = tf.config.list_physical_devices('GPU') 
+if len(gpu_devices) > 0:
+    print("GPU detected")
+    for i in range(len(gpu_devices)):
+        tf.config.experimental.set_memory_growth(gpu_devices[i], True)
 
 exp_folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 

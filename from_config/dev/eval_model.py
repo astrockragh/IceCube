@@ -21,7 +21,7 @@ def zeni_alpha(y_true, y_reco):
     return u_zen.numpy()
 
 def azi_res(y_true, y_reco):
-    diffs = tf.minimum(abs(y_true[:, 2] - y_reco[:, 2]), abs(y_true[:, 2] - y_reco[:, 2])%(2*np.pi))
+    diffs = tf.minimum(abs(y_true[:, 2] - y_reco[:, 2]), abs(y_true[:, 2] - y_reco[:, 2])%(np.pi))
     return diffs.numpy()
 
 
@@ -285,7 +285,7 @@ def performance_zeniazi(loader, test_step, metrics, save=False, save_path=''):
     ax_z[2].plot([0, np.pi], [0,np.pi], 'w--')
 
     ax_z[3].hist2d(np.abs(y_reco[:,3]), reszeni, bins=100,\
-                  range=[np.percentile(np.abs(y_reco[:,3]),[1,99]), np.percentile(reszeni,[1,99])])
+                  range=[np.percentile(np.abs(y_reco[:,3]),[0.1,99]), np.percentile(reszeni,[1,99])])
     ax_z[3].set_title("ML Kappa correlation with zenith error")
     ax_z[3].set(xlabel=r"$\kappa$", ylabel=r"$\Delta \Theta$")
     for axi in ax_z:
