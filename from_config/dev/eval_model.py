@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore")
 eps=1e-5
 
 def azi_alpha(y_true, y_reco):
-    diffs = tf.minimum(abs(y_true[:, 2] - y_reco[:, 2]), abs(y_true[:, 2] - y_reco[:, 2])%(2*np.pi))
+    diffs = tf.minimum(abs(y_true[:, 2] - y_reco[:, 2]), abs(y_true[:, 2] - y_reco[:, 2])%(np.pi))
     u_azi = 180 / np.pi * tfp.stats.percentile(diffs, [50-34,50,50+34, 68])
     return u_azi.numpy()
 

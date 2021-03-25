@@ -120,8 +120,8 @@ def abs_vonMises2D_angle(y_reco, y_true, re=False):
     #energy
     loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0])))
 
-    polar_k     = y_reco[:, 3]
-    zenth_k     = y_reco[:, 4]
+    polar_k     = abs(y_reco[:, 3])
+    zenth_k     = abs(y_reco[:, 4])
 
     cos_azi     = cos(subtract(y_true[:,2], y_reco[:,2]))
 
