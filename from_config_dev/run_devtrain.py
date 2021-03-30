@@ -35,7 +35,8 @@ for i, experiment in enumerate(exp_list):
         construct_dict = json.load(file)
     construct_dict['experiment_name']=experiment[:-5]
     construct_dict['data_params']['n_data']=2e5
-    construct_dict['run_params']['n_data']=30
+    construct_dict['run_params']['epochs']=30
+    construct_dict['run_params']['val_epoch']=30
     construct_dict['experiment']='dev'
     # data_exists=check_dataset(construct_dict['data_params']['database'], construct_dict['data_params']['muon'],\
     #      construct_dict['data_params']['n_data'], construct_dict['data_params']['graph_construction'])

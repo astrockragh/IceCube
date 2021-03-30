@@ -5,7 +5,7 @@ naming convention: EnergyLossMethod_AngleLossMethod_Unitvec/Angle '''
 
 import tensorflow as tf
 import numpy as np
-from tensorflow.math import sin, cos, acos, abs, reduce_mean, reduce_sum, subtract, square
+from tensorflow.math import sin, cos, acos, abs, reduce_mean, reduce_sum, subtract, square, log, exp
 
 eps=1e-5
 
@@ -25,87 +25,26 @@ def cos_unit(y_reco, y_true):
     cosalpha-=tf.math.sign(cosalpha) * eps
     return cosalpha
 
-# def cos_azi(y_reco,y_true):
-#     return
-
 #################################################################
-# Absolute error for E, linear alpha for angle                 #
+# Absolute error for E, wrapped cauchy for solid angle          #
 ################################################################
 
-def abs_linear_unit(y_reco, y_true, re=False):
-    ''
-    from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract
-    
-    #energy loss
-
-    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0])))
-    
-    #angle loss
-    
-    cos_alpha = cos_unit(y_reco,y_true)
-    loss_angle = reduce_mean(tf.math.acos(cos_alpha))
-    if not re:
-        return loss_energy+loss_angle
-    else:   
-        return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
-
-#################################################################
-# Absolute error for E, negative cos (1-cos(\alpha)) for angle #
-################################################################
-
-def abs_negcos_unit(y_reco, y_true, re=False):
-    # Energy loss
-    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]) ) )
-    # Angle loss
-    loss_angle = tf.reduce_mean(1-cos_unit(y_reco[:, 1:4], y_true[:, 1:4])) 
-    if not re:
-        return loss_energy+loss_angle
-    else:   
-        return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
-
-
-def abs_negcos_angle(y_reco, y_true, re=False):
-    # Energy loss
-    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0]))) #this works well but could maybe be improved
-    # Angle loss
-    loss_angle = reduce_mean(1-cos_angle(y_reco, y_true))
-    if not re:
-        return loss_energy+loss_angle
-    else:   
-        return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
-
-#################################################################
-# Absolute error for E, von Mises for angle                    #
-################################################################
-
-def abs_vonMises_angle(y_reco, y_true, re=False):
+def abs_cauchy3D(y_reco, y_true, re=False):
     #energy
-    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0])))
-    tf.debugging.assert_all_finite(loss_energy, 'Energy problem', name=None)
-    #angle
-    kappa=tf.math.abs(y_reco[:,3])+eps
-    cos_alpha=cos_angle(y_reco, y_true)
-    # tf.debugging.assert_less_equal(tf.math.abs(cos_alpha), 1, message='cos_alpha problem', summarize=None, name=None)
-    tf.debugging.assert_all_finite(tf.math.abs(cos_alpha), message='cos_alpha problem infinite/nan', name=None)
-    nlogC = -tf.math.log(kappa) + kappa +tf.math.log(1-tf.math.exp(-2*kappa))
-    tf.debugging.assert_all_finite(nlogC, 'log kappa problem', name=None)
+    
+    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0])))
 
-    loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
-    tf.debugging.assert_all_finite(loss_angle, 'Angle problem', name=None)
+    gamma     = abs(y_reco[:, 3])+eps
 
-    if not re:
-        return loss_angle+loss_energy
-    if re:
-        return float(loss_angle+loss_energy), [float(loss_energy), float(loss_angle)]
+    cos_alpha=cos_alpha(y_reco,y_true)
 
-def abs_vonMises_unit(y_reco, y_true, re=False):
-    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]) ) )
-    kappa=tf.math.abs(y_reco[:,4])
-#     tf.print(tf.reduce_mean(kappa))
-    cos_alpha=cos_unit(y_reco, y_true)
-    nlogC = -tf.math.log(kappa) + tf.math.log(tf.math.exp(kappa)-tf.math.exp(-kappa) )
+    norm    = log(1-2*exp(-2*gamma))
 
-    loss_angle = tf.reduce_mean( - kappa*cos_alpha + nlogC )
+    #negative log-likelihood
+    nllh     = log(1+2*exp(-2*gamma)-2*exp(-gamma)*cos_alpha)-norm
+
+    loss_angle=reduce_mean(nllh)
+
     if not re:
         return loss_angle+loss_energy
     if re:
@@ -113,8 +52,36 @@ def abs_vonMises_unit(y_reco, y_true, re=False):
 
 
 #################################################################
-# Absolute error for E, von Mises for zenith/azimuth            #
+# Absolute error for E, wrapped cauchy for azi/zenith          #
 ################################################################
+
+def abs_cauchy2D(y_reco, y_true, re=False):
+    #energy
+    
+    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0])))
+
+    gamma_zeni     = abs(y_reco[:, 3])+eps
+    gamma_azi     = abs(y_reco[:, 4])+eps
+
+    cos_zeni   = cos(subtract(y_true[:,1], y_reco[:,1]))
+
+    cos_azi     = cos(subtract(y_true[:,2], y_reco[:,2]))
+
+    norm_zeni    = log(1-exp(-2*gamma_zeni))
+    norm_azi   =  log(1-exp(-2*gamma_azi))
+
+
+    nllh_zeni     = log(1+exp(-2*gamma_zeni)-2*exp(-gamma_zeni)*cos_zeni)-norm_zeni
+    nllh_azi   = log(1+exp(-2*gamma_azi)-2*exp(-gamma_azi)*cos_azi)-norm_azi
+
+    loss_zeni=reduce_mean(nllh_zeni)
+    loss_azi=reduce_mean(nllh_azi)
+
+    if not re:
+        return loss_azi+loss_zeni+loss_energy
+    if re:
+        return float(loss_azi+loss_zeni+loss_energy), [float(loss_energy), float(loss_zeni), float(loss_azi)]
+
 
 def abs_vonMises2D_angle(y_reco, y_true, re=False):
     #energy
@@ -140,6 +107,7 @@ def abs_vonMises2D_angle(y_reco, y_true, re=False):
         return loss_azi+loss_zenith+loss_energy
     if re:
         return float(loss_azi+loss_zenith+loss_energy), [float(loss_energy), float(loss_zenith), float(loss_azi)]
+
 
 #################################################################
 # Absolute error for E, bivariate wrapped for zenith azimuth    #
@@ -170,22 +138,3 @@ def abs_vonMises2D_angle(y_reco, y_true, re=False):
 #         return loss_angle+loss_energy
 #     if re:
 #         return float(loss_angle+loss_energy), [float(loss_energy), float(loss_angle)]
-
-#New/untested below        
-
-# def loss_funcxpos2(y_reco, y_true, re=False):
-#     from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
-#     # Energy loss
-#     loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0]))) #this works well but could maybe be improved
-
-#     zeni = [cos(y_true[:,1]) - y_reco[:,1] , 
-#             sin(y_true[:,1]) - y_reco[:,2]]
-
-#     azi  = [cos(y_true[:,2]) - y_reco[:,3] , 
-#             sin(y_true[:,2]) - y_reco[:,4]]
-
-#     loss_angle = reduce_mean(square(azi[0]))+reduce_mean(square(azi[1]))+reduce_mean(square(zeni[0]))+reduce_mean(square(zeni[1]))
-#     if not re:
-#         return loss_energy+loss_angle
-#     else:   
-#         return float(loss_energy+loss_angle), [float(loss_energy), float(loss_angle)]
