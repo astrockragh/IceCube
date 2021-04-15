@@ -5,7 +5,7 @@ db_files
 wandb.ipynb
 wandb
 input.py
-
+from_config/nohup.out
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
