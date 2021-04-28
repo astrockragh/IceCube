@@ -3,6 +3,7 @@ import os, sys, tqdm, json, shutil, glob
 import os.path as osp
 
 from tensorflow.keras.backend import clear_session
+
 import tensorflow as tf
 
 gpu_devices = tf.config.list_physical_devices('GPU') 
@@ -13,8 +14,6 @@ if len(gpu_devices) > 0:
 
 exp0_folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-if len(sys.argv)==2:
-    os.environ['TF_NUM_INTRAOP_THREADS'] = str(sys.argv[2])
 SHUTDOWN = False
 ##########################################################
 #      Loop over JSON files and train models             # 
@@ -22,7 +21,7 @@ SHUTDOWN = False
 
 # Generate list over experiments to run
 from dev.utils import list_experiments, clean_done, check_dataset
-from dev.train_script import train_model
+from dev.train_dev import train_model
 clean_done(exp0_folder)
 exp_folder, exp_list = list_experiments(exp0_folder)
 
@@ -54,20 +53,6 @@ for i, experiment in enumerate(exp_list):
 
 
     clear_session()
-
-# if SHUTDOWN == True:
-#     os.system("shutdown -h")
-
-    # Create a script to go through and test the performance
-    # test_model(model = construct_dict['Experiment'], data = instructions_to_dataset_name(construct_dict))
-    
-
-
-
-
-# We can setup a shutdown maybe
-#os.system("shutdown -h 5")
-
 
 
 

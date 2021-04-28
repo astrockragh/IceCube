@@ -274,7 +274,7 @@ def setup_model(construct_dict):
     experiment    = construct_dict['experiment']
 
     # Load model from model folder
-    import dev.models as models
+    import dev.model_dev as models
     model         = getattr(models, model_name) 
     model         = model(**hyper_params)
 

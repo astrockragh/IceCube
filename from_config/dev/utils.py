@@ -37,6 +37,27 @@ def check_dataset(database='MuonGun', muon=True, n_data=1e4, graph_construction=
     data = osp.join(cwd, f"processed/{database}_muon_{muon}_n_data_{n_data}_type_{graph_construction}/data.dat")
     return osp.exists(data)
 
-
+def perms(diffs):
+    from itertools import product
+    keys=list(diffs.keys())
+    val=list(diffs.values())
+    for i, s in enumerate(val):
+        if i==0:
+            a=val[0]
+        else:
+            a=product(a, val[i])
+    bs=[]
+    for b in a:
+        bs.append(b)
+    output=[]
+    def removeNestings(l):
+        for i in l:
+            if type(i) == tuple:
+                removeNestings(i)
+            else:
+                output.append(i)
+    removeNestings(bs)
+    perms=np.array(output)
+    return perms.reshape(-1, len(keys))
 
 

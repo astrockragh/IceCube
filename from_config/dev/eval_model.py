@@ -454,5 +454,5 @@ def performance_vM2D(loader, test_step, metrics, save=False, save_path=''):
         axi.legend()
     fig.tight_layout()
     if save:
-        plt.savefig(save_path)
+        plt.savefig(save_path+'.png')
     return fig, ax

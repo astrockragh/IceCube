@@ -5,13 +5,16 @@ import numpy as np
 
 import os.path as osp
 
+###implement gradient tracking in this file###
+
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 from spektral.data import DisjointLoader
 from importlib import __import__
 
 cwd = osp.abspath('')
 
-def train_model(construct_dict):
+def analyze_train(construct_dict):
     """
     Train a model given a construction dictionairy
     """
@@ -120,7 +123,17 @@ def train_model(construct_dict):
         
         return loss, loss_from, [energy, e_old, alpha, zeni, azi]
 
+    @tf.function(experimental_relax_shapes = True)
+    def gradient_importance(inputs, targets, j):
+        with tf.GradientTape() as tape:
+            tape.watch(inputs[0])
+            predictions = model(inputs, training=False)[:,j] # needs to be under the gradient tape to be tracked
 
+        grads = tape.gradient(predictions, inputs[0])
+        grads=tf.where(tf.math.is_nan(grads), tf.zeros_like(grads), grads)
+
+        grads=tf.math.segment_mean(tf.math.abs(grads), inputs[2], name=None)
+        return grads
 
     ################################################
     #  Train Model                                 #      
@@ -160,6 +173,15 @@ def train_model(construct_dict):
 
             loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
             val_loss, val_loss_from, val_metric = validation(loader_val)
+            ##tensorboard
+            log_dir='tmp/board/'+wandb.run.name
+            # tb_callback=tensorflow.keras.callbacks.TensorBoard(log_dir = log_dir,
+            #                                      histogram_freq = 1,
+            #                                      profile_batch = '500,520')
+            # consider to start your looping after a few steps of training, so that the profiling does not consider initialization overhead
+            tf.profiler.experimental.start(log_dir)
+            tf.profiler.experimental.stop()
+            # tb_callback.set_model(model)
             if wandblog:
                 wandb.log({"Train Loss":      loss / loader_train.steps_per_epoch,
                         "Validation Loss": val_loss, 
@@ -180,6 +202,48 @@ def train_model(construct_dict):
                         "azimuth sig-1":   val_metric[4][0],
                         "azimuth sig+1":   val_metric[4][2],
                         "Learning rate":   learning_rate})
+            ###gradient_tracker, could possible made in a less sucky way
+            grad_dict={'energy':{'dom_x':1,
+                      'dom_y':1,
+                      'dom_z':1,
+                      'time':1,
+                      'logcharge':1,
+                      'SRT':1},
+                       'zenith':{'dom_x':1,
+                      'dom_y':1,
+                      'dom_z':1,
+                      'time':1,
+                      'logcharge':1,
+                      'SRT':1},
+                      'azimuth':{'dom_x':1,
+                      'dom_y':1,
+                      'dom_z':1,
+                      'time':1,
+                      'logcharge':1,
+                      'SRT':1},
+                      'sig_zeni':{'dom_x':1,
+                      'dom_y':1,
+                      'dom_z':1,
+                      'time':1,
+                      'logcharge':1,
+                      'SRT':1},
+                      'sig_azi':{'dom_x':1,
+                      'dom_y':1,
+                      'dom_z':1,
+                      'time':1,
+                      'logcharge':1,
+                      'SRT':1}}
+                      
+            keys=list(grad_dict.keys())
+            feats=list(grad_dict[keys[0]].keys())
+            for j in range(len(keys)):  
+                grads=gradient_importance(inputs, targets, j)
+                grads_av=tf.reduce_mean(grads, axis=0)
+                grads_av=grads_av/tf.reduce_sum(grads_av) #softmax
+                for i, feat in enumerate(feats):
+                    grad_dict[keys[j]][feat]=grads_av[i]
+            if wandblog:
+                wandb.log(grad_dict)
             print("\n")
             if not construct_dict['run_params']['zeniazi_metric']:
                 print(f"Avg loss of validation: {val_loss:.6f}")

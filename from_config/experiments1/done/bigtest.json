@@ -7,8 +7,8 @@
     "wandblog": true,
 
     "run_params":{
-    "epochs":     50,
-    "batch_size": 4096,
+    "epochs":     20,
+    "batch_size": 2048,
     "early_stop": true,
     "zeniazi_metric":true,
     "patience":   5,
@@ -41,14 +41,14 @@
     },
 
    "data_params":{ 
-    "n_data": 2e5,
+    "n_data": 2e4,
     "graph_construction":       "classic_lc",
     "muon":             true,
-    "n_neighbors":       10,
+    "n_neighbors":       14,
     "data_split":      [0.8, 0.1, 0.1],
     "restart":   false,
-    "transform_path": "../../../../pcs557/databases/dev_level7_mu_e_tau_oscweight_000/data/meta/transformers.pkl",
-    "db_path": "../../../../pcs557/databases/dev_level7_mu_e_tau_oscweight_000/data/dev_level7_mu_e_tau_oscweight_000.db",
+    "transform_path": "../db_files/muongun/transformers.pkl",
+    "db_path": "../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db",
     "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses", "lc"],
     "targets":    ["energy_log10", "zenith","azimuth"],
     "skip": 0,

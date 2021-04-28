@@ -1,4 +1,5 @@
 data
+trained_models
 sets.pkl
 junk.ipynb
 junkeditor.py

@@ -11,9 +11,14 @@ if len(gpu_devices) > 0:
     for i in range(len(gpu_devices)):
         tf.config.experimental.set_memory_growth(gpu_devices[i], True)
 
+###find new options###
+
+# gpu_options = tf.compat.v1.GPUOptions(per_process_gpu_memory_fraction=0.5) #define how much vram to use
+# sess=tf.compat.v1.Session(config=(tf.ConfigProto(gpu_options=gpu_options)))
+
 exp0_folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-if len(sys.argv)==2:
+if len(sys.argv)==3:
     os.environ['TF_NUM_INTRAOP_THREADS'] = str(sys.argv[2])
 SHUTDOWN = False
 ##########################################################
@@ -22,7 +27,7 @@ SHUTDOWN = False
 
 # Generate list over experiments to run
 from dev.utils import list_experiments, clean_done, check_dataset
-from dev.train_script import train_model
+from dev.analyze_script import analyze_train
 clean_done(exp0_folder)
 exp_folder, exp_list = list_experiments(exp0_folder)
 
@@ -45,7 +50,7 @@ for i, experiment in enumerate(exp_list):
 
     print(f"Starting experiment from {experiment[:-5]}")
 
-    epochexit=train_model(construct_dict)
+    epochexit=analyze_train(construct_dict)
     print(f'Exited training after {epochexit} epochs')
     shutil.move(osp.join(exp_folder, experiment), osp.join(exp0_folder+"/done", experiment))
     print(f"Experiment {experiment[:-5]} done \t {experiment}: {i + 1} / {len(exp_list)}")

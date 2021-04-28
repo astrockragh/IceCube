@@ -1,0 +1,2 @@
+{"K": [[1], [2], [3]],
+    "agg_method": ["sum","mean", "max", "min", "prod"]}
