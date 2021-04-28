@@ -13,7 +13,7 @@ if len(gpu_devices) > 0:
 
 exp0_folder = str(sys.argv[1])
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-if len(sys.argv)==2:
+if len(sys.argv)==3:
     os.environ['TF_NUM_INTRAOP_THREADS'] = str(sys.argv[2])
 SHUTDOWN = False
 ##########################################################

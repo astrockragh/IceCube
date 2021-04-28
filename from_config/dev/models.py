@@ -461,8 +461,8 @@ class SGConv(MessagePassing):
         self.agg_method=agg_method
         self.K=K
         self.hidden_states = hidden_states
-        self.message_mlps = [MLP(hidden_states * 2, hidden = hidden_states * 4, layers = 2, dropout = dropout) for _ in range(self.K)]
-        self.update_mlp  = MLP(hidden_states * 1, hidden = hidden_states * 2, layers = 2, dropout = dropout)
+        self.message_mlps = [MLP(hidden_states, hidden = hidden_states * 2, layers = 2, dropout = dropout) for _ in range(self.K)]
+        self.update_mlp  = MLP(hidden_states, hidden = hidden_states, layers = 2, dropout = dropout)
 
 
     ##inverted structure since tf requires output func to be propagate
@@ -501,41 +501,40 @@ class SGConv(MessagePassing):
 
 
 class SageHop(Model):
-    def __init__(self, n_out = 3, n_sigs=2, hidden_states=64, glob=True, conv_layers=1, conv_activation='relu', decode_layers=2, decode_activation=1, regularization=None, dropout=0.2, batch_norm=True):
+    def __init__(self, n_out = 3, n_sigs=2, hidden_states=64, conv_layers=2, decode_layers=3, conv_activation='relu', decode_activation=1, regularization=None, dropout=0.03):
         super().__init__()
         self.n_out=n_out
         self.n_sigs=n_sigs
         self.hidden_states=hidden_states
         self.conv_activation=conv_activation
         self.dropout=dropout
-        self.glob=glob
-        self.Ks=Ks
-        self.agg_method=agg_method
         self.conv_layers=conv_layers
         self.regularize=regularization
         if type(decode_activation)==str:
           self.decode_activation=tf.keras.activations.get(decode_activation)
         else:
           self.decode_activation=d_act
-        self.batch_norm=batch_norm
-        self.norm_edge  = BatchNormalization()
+        
         # Define layers of the model
 
-        self.2hopmean     = SGConv(hidden_states, hidden_states, K=2, agg_method='mean', dropout = dropout)
+        self.hop2mean     = SGConv(hidden_states, hidden_states, K=2, agg_method='mean', dropout = dropout)
 
-        self.12hopmin1     = SGConv(hidden_states, hidden_states, K=1, agg_method='min', dropout = dropout)
-        self.12hopmin2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
+        self.hop12min1     = SGConv(hidden_states, hidden_states, K=1, agg_method='min', dropout = dropout)
+        self.hop12min2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
 
-        self.12hopmax1     = SGConv(hidden_states, hidden_states, K=1, agg_method='max', dropout = dropout)
-        self.12hopmax2     = SGConv(hidden_states, hidden_states, K=2, agg_method='max', dropout = dropout)
+        self.hop12max1     = SGConv(hidden_states, hidden_states, K=1, agg_method='max', dropout = dropout)
+        self.hop12max2     = SGConv(hidden_states, hidden_states, K=2, agg_method='max', dropout = dropout)
 
-        self.23hopmin2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
-        self.23hopmin3     = SGConv(hidden_states, hidden_states, K=3, agg_method='min', dropout = dropout)
+        self.hop23min2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
+        self.hop23min3     = SGConv(hidden_states, hidden_states, K=3, agg_method='min', dropout = dropout)
 
         #edges!
-        self.edgeback = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states, activation = "relu", kernel_regularizer=self.regularize)
-        self.edgeforward = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states, activation = "relu", kernel_regularizer=self.regularize)
-        
+        # self.edgeback = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
+        # self.edgeforward = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
+        self.norm_edge  = BatchNormalization()
+        # self.norm_edge_f  = BatchNormalization()
+
+
         self.GCNs    = [GraphSageConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in 2*2**np.arange(self.conv_layers)]
 
         self.Pool1   = GlobalMaxPool()
@@ -551,9 +550,9 @@ class SageHop(Model):
         self.angles     = [Dense(hidden_states) for _ in range(2)]
         self.angles_out = Dense(2)
         self.angle_scale= Dense(2)
-        if n_sigs > 0:
-          self.sigs      = [Dense(hidden_states) for i in range(2)]
-          self.sigs_out  = Dense(n_sigs)
+        
+        self.sigs      = [Dense(hidden_states) for i in range(2)]
+        self.sigs_out  = Dense(n_sigs)
 
     def call(self, inputs, training = False):
         x, a, i = inputs
@@ -563,22 +562,25 @@ class SageHop(Model):
         glob_min=tf.math.segment_min(x,i)
         xglob=tf.concat([glob_avg, glob_var, glob_max, glob_min], axis=1)
         a, e    = self.generate_edge_features(x, a, forward=False, edgetype=0)
-        x2me=self.2hopmean([x,a,e])
+        e=self.norm_edge(e)
+        x2me=self.hop2mean([x,a,e])
 
-        x12mi=self.12hopmin1([x,a,e])
-        x12mi=self.12hopmin2([x12mi,a,e])
+        x12mi=self.hop12min1([x,a,e])
+        x12mi=self.hop12min2([x12mi,a,e])
 
-        x12ma=self.12hopmax1([x,a,e])
-        x12ma=self.12hopmax2([x12ma,a,e])
+        x12ma=self.hop12max1([x,a,e])
+        x12ma=self.hop12max2([x12ma,a,e])
 
-        x23mi=self.23hopmin1([x,a,e])
-        x23mi=self.23hopmin2([x23mi,a,e])
+        x23mi=self.hop23min2([x,a,e])
+        x23mi=self.hop23min3([x23mi,a,e])
 
-        x = tf.concat([x2me, x12mi,x12ma,x23mi])
-        xback=self.edgeback(x,a,e)
-        af, ef    = self.generate_edge_features(x, a, forward=True, edgetype=1)
-        xforward=self.edgeforward([x, af, ef])
-        x=tf.concat([xback, xforward])
+        x = tf.concat([x, x2me, x12mi,x12ma,x23mi], axis=1)
+        # tf.print(tf.shape(x))
+        # xback=self.edgeback([x,a,e])
+        # af, ef    = self.generate_edge_features(x, a, forward=True, edgetype=1)
+        # ef=self.norm_edge_f(ef)
+        # xforward=self.edgeforward([x, af, ef])
+        # x=tf.concat([xback, xforward], axis=1)
         for conv in self.GCNs:
           x=conv([x,a])
         x1 = self.Pool1([x, i])
@@ -601,16 +603,15 @@ class SageHop(Model):
         x_angles = self.angles_out(x_angles)
         zeniazi=sigmoid(self.angle_scale(x_angles))
 
-        if self.n_sigs > 0:
-          x_sigs  = self.sigs[0](x)
-          x_sigs  = self.sigs[1](x_sigs)
-          x_sigs  = tf.abs(self.sigs_out(x_sigs)) + eps
+        
+        x_sigs  = self.sigs[0](x)
+        x_sigs  = self.sigs[1](x_sigs)
+        x_sigs  = tf.abs(self.sigs_out(x_sigs)) + eps
         #could add correlation here 
         xs=tf.stack([x_loge[:,0], zeniazi[:,0]*np.pi, zeniazi[:,1]*2*np.pi], axis = 1)
-        if self.n_sigs > 0:
-          return tf.concat([xs, x_sigs], axis=1)
-        else:
-          return xs
+        
+        return tf.concat([xs, x_sigs], axis=1)
+       
 
 
     def generate_edge_features(self, x, a, forward,edgetype):
