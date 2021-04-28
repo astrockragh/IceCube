@@ -37,7 +37,7 @@
     "restart":   false,
     "transform_path": "../db_files/muongun/transformers.pkl",
     "db_path": "../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db",
-    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses, lc"],
+    "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses", "lc"],
     "targets":    ["energy_log10", "zenith","azimuth"],
     "SRT": 0,
     "database": "MuonGun"

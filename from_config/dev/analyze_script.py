@@ -138,7 +138,11 @@ def analyze_train(construct_dict):
     ################################################
     #  Train Model                                 #      
     ################################################
-
+    options = tf.profiler.experimental.ProfilerOptions(host_tracer_level = 3,
+                                        python_tracer_level = 1,
+                                        device_tracer_level = 1)
+    log_dir='tmp/board/'+wandb.run.name
+    tf.profiler.experimental.start(log_dir, options=options)
     tot_time=0
     current_batch = 0
     current_epoch = 1
@@ -173,14 +177,19 @@ def analyze_train(construct_dict):
 
             loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
             val_loss, val_loss_from, val_metric = validation(loader_val)
-            ##tensorboard
-            log_dir='tmp/board/'+wandb.run.name
+            ##################
+            ## TensorBoard ###
+            ##################
+            
             # tb_callback=tensorflow.keras.callbacks.TensorBoard(log_dir = log_dir,
             #                                      histogram_freq = 1,
             #                                      profile_batch = '500,520')
             # consider to start your looping after a few steps of training, so that the profiling does not consider initialization overhead
-            tf.profiler.experimental.start(log_dir)
-            tf.profiler.experimental.stop()
+
+
+            #-------------------------#
+
+            
             # tb_callback.set_model(model)
             if wandblog:
                 wandb.log({"Train Loss":      loss / loader_train.steps_per_epoch,
@@ -289,9 +298,11 @@ def analyze_train(construct_dict):
             start_time      = time.time()
             current_epoch  += 1
             current_batch   = 0
+    tf.profiler.experimental.stop()
     return current_epoch
     run.finish()
-    
+
+
 ######
 #dependencies
 ######
