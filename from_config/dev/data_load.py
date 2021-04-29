@@ -29,7 +29,7 @@ class graph_data(Dataset):
     def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
         transform_path='../db_files/muongun/transformers.pkl',\
              db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], SRT=1, graph_construction='classic', database='MuonGun', **kwargs):
+                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], SRT=1, graph_construction='classic', database='MuonGun', return_eventnos=False, **kwargs):
 
 
         self.n_data = int(n_data)
@@ -50,6 +50,7 @@ class graph_data(Dataset):
         self.graph_construction=graph_construction
         self.database=database
         self.k=0
+        self.eventno=return_eventnos
         super().__init__(**kwargs)
     
     @property
@@ -151,6 +152,8 @@ class graph_data(Dataset):
 
                 print("Saving dataset")
                 pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
+                if self.eventno:
+                    df_event.to_csv(self.path+'/event_nos.csv')
         else:
             pass
         

@@ -517,19 +517,18 @@ class SageHop(Model):
         
         # Define layers of the model
 
-        self.hop2mean     = SGConv(hidden_states, hidden_states, K=2, agg_method='mean', dropout = dropout)
+        # self.hop2mean     = SGConv(hidden_states, hidden_states, K=2, agg_method='mean', dropout = dropout)
 
         self.hop12min1     = SGConv(hidden_states, hidden_states, K=1, agg_method='min', dropout = dropout)
         self.hop12min2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
 
-        self.hop12max1     = SGConv(hidden_states, hidden_states, K=1, agg_method='max', dropout = dropout)
-        self.hop12max2     = SGConv(hidden_states, hidden_states, K=2, agg_method='max', dropout = dropout)
+        # self.hop12max1     = SGConv(hidden_states, hidden_states, K=1, agg_method='max', dropout = dropout)
+        # self.hop12max2     = SGConv(hidden_states, hidden_states, K=2, agg_method='max', dropout = dropout)
 
-        self.hop23min2     = SGConv(hidden_states, hidden_states, K=2, agg_method='min', dropout = dropout)
-        self.hop23min3     = SGConv(hidden_states, hidden_states, K=3, agg_method='min', dropout = dropout)
 
         #edges!
-        # self.edgeback = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
+        a=2
+        self.edgeback = ECCConv(self.hidden_states//2, [self.hidden_states//a, self.hidden_states//a, self.hidden_states//a], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
         # self.edgeforward = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
         self.norm_edge  = BatchNormalization()
         # self.norm_edge_f  = BatchNormalization()
@@ -541,7 +540,7 @@ class SageHop(Model):
         self.Pool2   = GlobalAvgPool()
         self.Pool3   = GlobalSumPool()
 
-        self.decode  = [Dense(i * hidden_states) for i in  2*2**np.arange(decode_layers+1,1,-1)]
+        self.decode  = [Dense(int(i) * hidden_states) for i in  1.5*2**np.arange(decode_layers+1,1,-1)]
         self.dropout_layers  = [Dropout(dropout) for i in range(len(self.decode))]
         self.norm_layers  = [BatchNormalization() for i in range(len(self.decode))]
 
@@ -561,20 +560,23 @@ class SageHop(Model):
         glob_max=tf.math.segment_max(x,i)
         glob_min=tf.math.segment_min(x,i)
         xglob=tf.concat([glob_avg, glob_var, glob_max, glob_min], axis=1)
-        a, e    = self.generate_edge_features(x, a, forward=False, edgetype=0)
+        a, e    = self.generate_edge_features(x, a, forward=False, edgetype=1)
         e=self.norm_edge(e)
-        x2me=self.hop2mean([x,a,e])
+        x =self.hop12min1([x,a,e])
+        x =self.hop12min2([x,a,e])
+        x = self.edgeback([x,a,e])
+        # x2me=self.hop2mean([x,a,e])
 
-        x12mi=self.hop12min1([x,a,e])
-        x12mi=self.hop12min2([x12mi,a,e])
+        # x12mi=self.hop12min1([x,a,e])
+        # x12mi=self.hop12min2([x12mi,a,e])
 
-        x12ma=self.hop12max1([x,a,e])
-        x12ma=self.hop12max2([x12ma,a,e])
+        # x12ma=self.hop12max1([x,a,e])
+        # x12ma=self.hop12max2([x12ma,a,e])
 
-        x23mi=self.hop23min2([x,a,e])
-        x23mi=self.hop23min3([x23mi,a,e])
+        # x23mi=self.hop23min2([x,a,e])
+        # x23mi=self.hop23min3([x23mi,a,e])
 
-        x = tf.concat([x, x2me, x12mi,x12ma,x23mi], axis=1)
+        # x = tf.concat([x, x2me, x12mi,x12ma,x23mi], axis=1)
         # tf.print(tf.shape(x))
         # xback=self.edgeback([x,a,e])
         # af, ef    = self.generate_edge_features(x, a, forward=True, edgetype=1)
