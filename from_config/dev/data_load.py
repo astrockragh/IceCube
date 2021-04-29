@@ -173,7 +173,8 @@ class graph_data(Dataset):
 
         idx_tr, idx_val, idx_test  = np.split(idxs, [train_split, val_split])
         self.index_lists = [idx_tr, idx_val, idx_test]
-         df_event=pd.read_csv(self.path+'/event_nos.csv')
+        df_event=pd.read_csv(self.path+'/event_nos.csv')
         if self.eventno:
-            return data, 
-        return data
+            return data, df_event
+        else:
+            return data
