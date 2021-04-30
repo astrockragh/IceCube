@@ -22,18 +22,17 @@ class graph_data(Dataset):
     data that takes config file
     """
 
-    def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], \
-        targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
-        transform_path='../db_files/muongun/transformers.pkl',\
-             db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 10, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
+    def __init__(self, n_data = 1e6 ,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "rqe"], \
+        targets= ["energy_log10", "zenith","azimuth"], pid = None,\
+    transform_path="../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/transformers.pkl",\
+    db_path="../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/data/dev_lvl7_mu_nu_e_classification_v003.db",\
+                  n_neighbors = 10, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='dev7_v003', **kwargs):
 
 
         self.n_data = int(n_data)
         self.features=features
         self.targets=targets
-        self.muon=muon
-        self.skip   = skip
+        self.pid=pid
         self.dom_norm = 1e3
         self.transform_path=transform_path
         self.db_path=db_path
@@ -54,7 +53,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.database}_muon_{self.muon}_n_data_{self.n_data}_type_{self.graph_construction}_nn_{self.n_neighbors}")
+        path = osp.join(cwd, f"processed/{self.database}_pid_{self.pid}_n_data_{self.n_data}_type_{self.graph_construction}")
         return path
 
     def reload(self):
@@ -75,35 +74,35 @@ class graph_data(Dataset):
 
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
-                # Find indices to cut after
-                try:
-                    if self.muon:
-                        print('Loading Muons')
-                        start_id = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip}").fetchall()[0][0]
-                        stop_id  = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
-                    else:
-                        print('Loading Neutrinos')
-                        start_id = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip}").fetchall()[0][0]
-                        stop_id  = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
-                except:
-                    ""
-                    start_id = 0
-                    stop_id  = 100
+                print('Loading dataframes')
+                target_call  = ", ".join(self.targets)
+                df_targ=read_sql(f"select {target_call} from truth limit {self.n_data}", conn)
+                pid=['event_no', 'pid']
+                pid_call = ", ".join(pid)
+                df_pid=read_sql(f"select {pid_call} from truth limit {self.n_data}", conn)
+                ##what particles?
+                if self.pid==None:
+                    event_nos=np.array(df_pid['event_no'])
+                if self.pid!=None and len(self.pid==1): 
+                    event_nos=np.array(df_pid['event_no'][df_pid['pid']!=self.pid[0]])
+                if self.pid!=None and len(self.pid>1): 
+                    event_nos=np.array(df_pid['event_no'][df_pid['pid'].isin(self.pid)])
                 # SQL queries format
                 feature_call = ", ".join(self.features)
-                target_call  = ", ".join(self.targets)
                 
                 # Load data from db-file
                 print("Reading files")
+    
+                str_eventnos=[str(event_no) for event_no in event_nos]
+                event_nocall=", ".join(str_eventnos)
+                df_feat=read_sql(f"select event_no, {feature_call} from features where event_no in ({event_nocall})", conn)
                 
-                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
-                
+                df_event=DataFrame(df_feat['event_no'])
+                df_feat.drop(['event_no'], axis=1)
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
-
+                
 
                 for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
@@ -116,7 +115,7 @@ class graph_data(Dataset):
 
                 # Cut indices
                 print("Splitting data to events")
-                idx_list    = np.array(df_event)
+                idx_list    = np.array(df_feat)
                 x_not_split = np.array(df_feat)
 
                 _, idx, counts = np.unique(idx_list.flatten(), return_index = True, return_counts = True) 
@@ -143,9 +142,8 @@ class graph_data(Dataset):
 
                 print("Saving dataset")
                 pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
-                
-                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
-                df_event.to_csv(self.path+'/event_nos.csv')
+                df_csv=DataFrame(df_pid['event_no'])
+                df_csv.to_csv(self.path+'/event_nos.csv')
         else:
             pass
         

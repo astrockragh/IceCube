@@ -6,7 +6,11 @@ from importlib import import_module
 
 
 cwd = osp.abspath('')
-
+def to_sigma(zes, azs):
+    from scipy.special import iv
+    az_sigma = np.sqrt(1 - iv(1,np.square(azs))/iv(0,np.square(azs)))*180/np.pi
+    ze_sigma = np.sqrt(1 - iv(1,np.square(zes))/iv(0,np.square(zes)))*180/np.pi
+    return ze_sigma, az_sigma
 
 def list_experiments(folder):
     experiment_folder = osp.join(cwd, folder, "todo") 

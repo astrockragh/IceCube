@@ -1,10 +1,18 @@
-import os, sys, tqdm, json, shutil, glob
+import os, sys, tqdm, json, shutil, glob, argparse
 
 import os.path as osp
 
 from tensorflow.keras.backend import clear_session
 import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+parser = argparse.ArgumentParser()
+parser.add_argument("-f", "--f", type=str, required=False)
+parser.add_argument("-gpu", "--gpu", type=str, required=False)
+parser.add_argument("-cpus", "--cpus", type=str, required=False)
+args = parser.parse_args()
 
+if args.gpu!='all':
+    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
 gpu_devices = tf.config.list_physical_devices('GPU') 
 
 if len(gpu_devices) > 0:
@@ -12,11 +20,9 @@ if len(gpu_devices) > 0:
     for i in range(len(gpu_devices)):
         tf.config.experimental.set_memory_growth(gpu_devices[i], True)
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-exp0_folder = str(sys.argv[1])
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-if len(sys.argv)==3:
-    os.environ['TF_NUM_INTRAOP_THREADS'] = str(sys.argv[2])
+exp0_folder = str(args.f)
+if args.cpus!='all':
+    os.environ['TF_NUM_INTRAOP_THREADS'] = args.cpus
 SHUTDOWN = False
 ##########################################################
 #      Loop over JSON files and train models             # 

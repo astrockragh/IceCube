@@ -1,12 +1,12 @@
 {
     "experiment": "IceCube_neutrino",
-    "group":  "K_agg", 
+    "group":  "neutrino_0", 
 
-    "model_name":  "KHop",
+    "model_name":  "SageHop",
     "wandblog": true,
 
     "run_params":{
-    "epochs":     1,
+    "epochs":     30,
     "batch_size": 512,
     "early_stop": true,
     "zeniazi_metric":true,
@@ -15,28 +15,24 @@
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   14,
+    "val_epoch":   10,
     "loss_func": "abs_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
     "performance_plot": "performance_vM2D"
 },
 
+
     "hyper_params": {
         "n_out":           3,
         "n_sigs":          2,
-        "K":        [1,2,3],
-        "hidden_states":   40,
-        "glob": true,
-        "conv_layers":   2,
-        "conv_activation": "relu",
-        "decode_layers":   2,
+        "hidden_states":   25,
+        "conv_layers": 3,
+        "decode_layers":   3,
         "decode_activation": 1,
-        "dropout":         0.02,
-        "regularization": null, 
-        "batch_norm":      true,
-        "forward":  false
+        "dropout":         0.03,
+        "regularization": "l2"
     },
-
+    
    "data_params":{ 
     "n_data": 1e6,
     "graph_construction":       "classic",
