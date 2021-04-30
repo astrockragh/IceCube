@@ -8,7 +8,7 @@ else:
     from tqdm import tqdm
 import os.path as osp
 
-from pandas import read_sql, concat
+from pandas import read_sql, concat, read_csv, DataFrame
 from sklearn.preprocessing import normalize, RobustScaler
 from sklearn.neighbors import kneighbors_graph as knn
 import matplotlib.pyplot as plt
@@ -17,19 +17,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from spektral.data import Dataset, Graph
 from scipy.sparse import csr_matrix
 
-# features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"]
-target_angle = ["energy_log10", "zenith","azimuth"]
-target_unitvec  = ["energy_log10", "direction_x", "direction_y", "direction_z"]
-
 class graph_data(Dataset):
     """
     data that takes config file
     """
 
-    def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
+    def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], \
+        targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
         transform_path='../db_files/muongun/transformers.pkl',\
              db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], SRT=1, graph_construction='classic', database='MuonGun', return_eventnos=False, **kwargs):
+                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
 
 
         self.n_data = int(n_data)
@@ -46,11 +43,9 @@ class graph_data(Dataset):
         self.train_size, self.val_size, self.test_split = data_split
         self.seed = 42
         self.restart=restart
-        self.SRT=SRT
         self.graph_construction=graph_construction
         self.database=database
         self.k=0
-        self.eventno=return_eventnos
         super().__init__(**kwargs)
     
     @property
@@ -100,14 +95,10 @@ class graph_data(Dataset):
                 
                 # Load data from db-file
                 print("Reading files")
-                if self.SRT:
-                    df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
-                    df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id} and SRTInIcePulses = 1", conn)
-                    df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
-                else:
-                    df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                    df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                    df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
+                
+                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
                 
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
@@ -152,8 +143,9 @@ class graph_data(Dataset):
 
                 print("Saving dataset")
                 pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
-                if self.eventno:
-                    df_event.to_csv(self.path+'/event_nos.csv')
+                
+                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
+                df_event.to_csv(self.path+'/event_nos.csv')
         else:
             pass
         
@@ -173,8 +165,8 @@ class graph_data(Dataset):
 
         idx_tr, idx_val, idx_test  = np.split(idxs, [train_split, val_split])
         self.index_lists = [idx_tr, idx_val, idx_test]
-        df_event=pd.read_csv(self.path+'/event_nos.csv')
-        if self.eventno:
-            return data, df_event
-        else:
-            return data
+        
+        df_event=read_csv(self.path+'/event_nos.csv')
+        self.df_event=df_event
+        
+        return data
