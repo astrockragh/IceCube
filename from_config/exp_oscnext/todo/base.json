@@ -1,6 +1,6 @@
 {
     "experiment": "IceCube_neutrino",
-    "group":  "K_agg", 
+    "group":  "submit", 
 
     "model_name":  "KHop",
     "wandblog": true,
@@ -15,7 +15,7 @@
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   14,
+    "val_epoch":   15,
     "loss_func": "abs_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
     "performance_plot": "performance_vM2D"
@@ -24,7 +24,8 @@
     "hyper_params": {
         "n_out":           3,
         "n_sigs":          2,
-        "K":        [1,2,3],
+        "K":        [1,2],
+        "agg_method": "max",
         "hidden_states":   40,
         "glob": true,
         "conv_layers":   2,
@@ -38,18 +39,16 @@
     },
 
    "data_params":{ 
-    "n_data": 1e6,
+    "n_data": 1e7,
     "graph_construction":       "classic",
     "muon":             false,
-    "n_neighbors":       14,
-    "data_split":      [0.8, 0.1, 0.1],
-    "restart":   false,
+    "n_neighbors":       27,
+    "restart":   true,
     "transform_path": "../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/transformers.pkl",
     "db_path": "../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/data/dev_lvl7_mu_nu_e_classification_v003.db",
     "features":   ["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"],
     "targets":    ["energy_log10", "zenith","azimuth"],
-    "skip": 0,
-    "database": "oscNext"
+    "database": "submit"
 }
 }
    

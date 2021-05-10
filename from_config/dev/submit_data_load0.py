@@ -8,7 +8,8 @@ else:
     from tqdm import tqdm
 import os.path as osp
 
-from pandas import read_sql, concat, read_csv, DataFrame
+from pandas import read_sql, concat
+import pandas as pd
 from sklearn.preprocessing import normalize, RobustScaler
 from sklearn.neighbors import kneighbors_graph as knn
 import matplotlib.pyplot as plt
@@ -22,30 +23,26 @@ class graph_data(Dataset):
     data that takes config file
     """
 
-    def __init__(self, n_data = 1 ,features=["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses"], \
-        targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
-        transform_path='../db_files/muongun/transformers.pkl',\
-             db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 10, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
+    def __init__(self, frac_data = 0.5 ,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"], 
+    targets= ["energy_log10", "zenith","azimuth"],
+    transform_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/transformers.pkl',
+    db_path= '../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/data/dev_lvl7_mu_nu_e_classification_v003.db', 
+    set_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/sets.pkl',
+    n_neighbors = 30, restart=False, graph_construction='classic', database='submit', **kwargs):
 
 
-        self.n_data = int(n_data)
+        self.frac_data = frac_data
         self.features=features
         self.targets=targets
-        self.muon=muon
-        self.skip   = skip
         self.dom_norm = 1e3
         self.transform_path=transform_path
         self.db_path=db_path
+        self.set_path=set_path
         self.n_neighbors = n_neighbors
-        if sum(data_split) != 1:
-            sys.exit("Total splits must add up to 1")
-        self.train_size, self.val_size, self.test_split = data_split
         self.seed = 42
         self.restart=restart
         self.graph_construction=graph_construction
         self.database=database
-        self.k=0
         super().__init__(**kwargs)
     
     @property
@@ -54,7 +51,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.database}_muon_{self.muon}_n_data_{self.n_data}_type_{self.graph_construction}_nn_{self.n_neighbors}")
+        path = osp.join(cwd, f"processed/{self.database}_{self.n_neighbors}nn_{self.graph_construction}graph_{len(self.features)}feat")
         return path
 
     def reload(self):
@@ -62,33 +59,36 @@ class graph_data(Dataset):
             shutil.rmtree(self.path)
             print('Removed and ready to reload')
 
-    def check_dataset(self):
-        return osp.exists(self.path)
+    def get_event_no(self):
+        print('Reading sets')
+        sets = pd.read_pickle(self.set_path)
+        train_events = sets['train']
+        test_events = sets['test']
+        return train_events['event_no'].to_numpy(), test_events['event_no'].to_numpy()
 
     def download(self):
-        if not self.check_dataset():
-            # Get raw_data
-            db_file   = self.db_path
-
-            # Make output folder
-            os.makedirs(self.path)
-
+        # Get raw_data
+        # Make output folder
+        os.makedirs(self.path)
+        train_events, test_events=self.get_event_no()
+        events=[train_events,test_events]
+        for i, train_test in enumerate(['train','test']):
+            db_file  = self.db_path
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
-                # Find indices to cut after
                 # SQL queries format
                 feature_call = ", ".join(self.features)
                 target_call  = ", ".join(self.targets)
-                
+                event_nos=tuple(events[i].reshape(1, -1)[0])
                 # Load data from db-file
                 print("Reading files")
-                print('reading event')
-                df_event = read_sql(f"select event_no       from features ", conn)
-                print('reading features')
-                df_feat  = read_sql(f"select {feature_call} from features", conn)
-                print('reading targets')
-                df_targ  = read_sql(f"select {target_call } from truth", conn)
-                print('Transforming')
+                df_event = read_sql(f"select event_no from features where event_no in {event_nos}", conn)
+                print("Events read")
+                df_feat  = read_sql(f"select {feature_call} from features where event_no in {event_nos}", conn)
+                print("Features read")
+                df_targ  = read_sql(f"select {target_call } from truth where event_no in {event_nos}", conn)
+                print("Truth read")
+
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
@@ -98,12 +98,10 @@ class graph_data(Dataset):
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
 
                 for col in df_targ.columns:
-                    # print(col)
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
-                print("Saving event nos")
-                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
-                df_event.to_csv(self.path+'/event_nos.csv')
+            
+
                 # Cut indices
                 print("Splitting data to events")
                 idx_list    = np.array(df_event)
@@ -113,10 +111,9 @@ class graph_data(Dataset):
                 xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
 
                 ys          = np.array(df_targ)
-
                 print(df_feat.head())
                 print(df_targ.head())
-                
+
                 # Generate adjacency matrices
                 print("Generating adjacency matrices")
                 graph_list = []
@@ -131,35 +128,21 @@ class graph_data(Dataset):
 
                 graph_list = np.array(graph_list, dtype = object)
 
-                import gc
-                del df_feat
-                del df_event
-                del df_targ
-                gc.collect()
+
                 print("Saving dataset")
-                pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'), protocol=2)
-            
-        else:
-            pass
+                pickle.dump(graph_list, open(osp.join(self.path, f"data_{train_test}.dat"), 'wb'))
         
     def read(self):
-        if self.restart and self.k==0:
+        if self.restart:
             self.reload()
             self.download()
-            self.k+=1
-        print("Loading data to memory")
-        data   = pickle.load(open(osp.join(self.path, "data.dat"), 'rb'))
-
-
-        np.random.seed(self.seed)
-        idxs = np.random.permutation(len(data))
-        train_split = int(self.train_size * len(data))
-        val_split   = int(self.val_size * len(data)) + train_split
-
-        idx_tr, idx_val, idx_test  = np.split(idxs, [train_split, val_split])
-        self.index_lists = [idx_tr, idx_val, idx_test]
+        print("Loading train data to memory")
+        data_train   = pickle.load(open(osp.join(self.path, "data_train.dat"), 'rb'))
+        print("Loading test data to memory")
+        data_test   = pickle.load(open(osp.join(self.path, "data_test.dat"), 'rb'))
         
-        df_event=read_csv(self.path+'/event_nos.csv')
-        self.df_event=df_event
-        
-        return data
+        dataset_train = data_train[:int(self.frac_data*len(data_train))]
+
+        dataset_test  = data_test[:int(self.frac_data*len(data_test))]
+
+        return dataset_train, dataset_test

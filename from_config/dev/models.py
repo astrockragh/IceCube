@@ -773,3 +773,138 @@ class SageHopE(Model):
         speed = tf.cast(tf.where(speed, 0,1), tf.float32)
         e = tf.concat([diff_x[:, 3:], tf.expand_dims(dists, -1), vects, tf.expand_dims(speed,-1)], axis = 1)
       return a, e
+
+class NeutrinoHop(Model):
+    def __init__(self, n_out = 3, n_sigs=2, hidden_states=64, conv_layers=2, decode_layers=3, conv_activation='relu', decode_activation=1, regularization=None, dropout=0.03):
+        super().__init__()
+        self.n_out=n_out
+        self.n_sigs=n_sigs
+        self.hidden_states=hidden_states
+        self.conv_activation=conv_activation
+        self.dropout=dropout
+        self.conv_layers=conv_layers
+        self.regularize=regularization
+        if type(decode_activation)==str:
+          self.decode_activation=tf.keras.activations.get(decode_activation)
+        else:
+          self.decode_activation=d_act
+        
+        # Define layers of the model
+
+        self.hop2mean     = SGConv(hidden_states, hidden_states, K=2, agg_method='mean', dropout = dropout)
+
+
+        self.hop12max1     = SGConv(hidden_states, hidden_states, K=1, agg_method='max', dropout = dropout)
+        self.hop12max2     = SGConv(hidden_states, hidden_states, K=2, agg_method='max', dropout = dropout)
+
+        a=2
+        self.edgeback = ECCConv(self.hidden_states//2, [self.hidden_states//a, self.hidden_states//a, self.hidden_states//a], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
+        # self.edgeforward = ECCConv(self.hidden_states//2, [self.hidden_states//2, self.hidden_states//2, self.hidden_states//2], n_out = self.hidden_states//2, activation = "relu", kernel_regularizer=self.regularize)
+        self.norm_edge  = BatchNormalization()
+        # self.norm_edge_f  = BatchNormalization()
+
+
+        self.GCNs    = [GraphSageConv(hidden_states*int(i), activation=self.conv_activation, kernel_regularizer=self.regularize) for i in 2*2**np.arange(self.conv_layers)]
+
+        self.Pool1   = GlobalMaxPool()
+        self.Pool2   = GlobalAvgPool()
+        self.Pool3   = GlobalSumPool()
+
+        self.decode  = [Dense(int(i) * hidden_states) for i in  1.5*2**np.arange(decode_layers+1,1,-1)]
+        self.dropout_layers  = [Dropout(dropout) for i in range(len(self.decode))]
+        self.norm_layers  = [BatchNormalization() for i in range(len(self.decode))]
+
+        self.loge     = [Dense(hidden_states) for _ in range(2)]
+        self.loge_out = Dense(1)
+        self.angles     = [Dense(hidden_states) for _ in range(2)]
+        self.angles_out = Dense(2)
+        self.angle_scale= Dense(2)
+        
+        self.sigs      = [Dense(hidden_states) for i in range(2)]
+        self.sigs_out  = Dense(n_sigs)
+
+    def call(self, inputs, training = False):
+        x, a, i = inputs
+        glob_avg=tf.math.segment_mean(x,i)
+        glob_var=abs(tf.math.subtract(tf.math.segment_mean(multiply([x,x]),i),multiply([glob_avg, glob_avg])))
+        glob_max=tf.math.segment_max(x,i)
+        glob_min=tf.math.segment_min(x,i)
+        xglob=tf.concat([glob_avg, glob_var, glob_max, glob_min], axis=1)
+        a, e    = self.generate_edge_features(x, a, forward=False, edgetype=1)
+        e=self.norm_edge(e)
+        x =self.hop12max1([x,a,e])
+        x =self.hop12max2([x,a,e])
+        
+        x2me=self.hop2mean([x,a,e])
+
+        x = tf.concat([x, x2me], axis=1)
+        # tf.print(tf.shape(x))
+
+        x = self.edgeback([x,a,e])
+        for conv in self.GCNs:
+          x=conv([x,a])
+        x1 = self.Pool1([x, i])
+        x2 = self.Pool2([x, i])
+        x3 = self.Pool3([x, i])
+        #maybe histpool here
+        x = tf.concat([x1, x2, x3], axis = 1)
+        x=tf.concat([x, xglob], axis=1)
+        for decode_layer, dropout_layer, norm_layer in zip(self.decode, self.dropout_layers, self.norm_layers):
+          x = dropout_layer(x, training = training)
+          x = self.decode_activation(decode_layer(x))
+          x = norm_layer(x, training = training)
+                
+        x_loge = self.loge[0](x)
+        x_loge = self.loge[1](x_loge)
+        x_loge = self.loge_out(x_loge)
+
+        x_angles = self.angles[0](x)
+        x_angles = self.angles[1](x_angles)
+        x_angles = self.angles_out(x_angles)
+        zeniazi=sigmoid(self.angle_scale(x_angles))
+
+        
+        x_sigs  = self.sigs[0](x)
+        x_sigs  = self.sigs[1](x_sigs)
+        x_sigs  = tf.abs(self.sigs_out(x_sigs)) + eps
+        #could add correlation here 
+        xs=tf.stack([x_loge[:,0], zeniazi[:,0]*np.pi, zeniazi[:,1]*2*np.pi], axis = 1)
+        
+        return tf.concat([xs, x_sigs], axis=1)
+       
+
+
+    def generate_edge_features(self, x, a, forward,edgetype):
+      send    = a.indices[:, 0]
+      receive = a.indices[:, 1]
+      
+      if forward == True: #could maybe be improved
+        forwards  = tf.gather(x[:, 3], send) <= tf.gather(x[:, 3], receive)
+
+        send    = tf.cast(send[forwards], tf.int64)
+        receive = tf.cast(receive[forwards], tf.int64)
+
+        a       = SparseTensor(indices = tf.stack([send, receive], axis = 1), values = tf.ones(tf.shape(send), dtype = tf.float32), dense_shape = tf.cast(tf.shape(a), tf.int64))
+       ##distance vectors
+      diff_x  = tf.subtract(tf.gather(x, receive), tf.gather(x, send))
+
+      dists   = tf.sqrt(
+        tf.reduce_sum(
+          tf.square(
+            diff_x[:, :3]
+          ), axis = 1
+        ))
+
+      vects = tf.math.divide_no_nan(diff_x[:, :3], tf.expand_dims(dists, axis = -1))
+      if edgetype==0:
+        e = tf.concat([diff_x[:, 3:], tf.expand_dims(dists, -1), vects], axis = 1)
+
+      if edgetype==1:
+        st=2699 # time scale, database specific
+        c=tf.constant(0.000299792458) #speed of light in km pr nanosec
+
+        speed = tf.math.divide_no_nan(dists, st*diff_x[:,3]) #could add fudge factor to account for ice c lower than vacuum c
+        speed = tf.math.greater_equal(speed, c)
+        speed = tf.cast(tf.where(speed, 0,1), tf.float32)
+        e = tf.concat([diff_x[:, 3:], tf.expand_dims(dists, -1), vects, tf.expand_dims(speed,-1)], axis = 1)
+      return a, e

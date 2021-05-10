@@ -16,28 +16,30 @@ else:
 
 import spektral
 from spektral.data import DisjointLoader
-os.chdir('../from_config')
-import dev.data_load as dl
-os.chdir('../model_eval')
+
+import data_load_eval as dl
 ##check that prediction name given
-save_path='predictions/'+'pred_'+str(sys.argv[1])
 
 graph_data=dl.graph_data
 ### test this bit
 parser = argparse.ArgumentParser()
 parser.add_argument("-database", "--database", type=str, required=False)
 parser.add_argument("-model", "--model", type=str, required=False)
+parser.add_argument("-run", "--run", type=str, required=False)
 args = parser.parse_args()
-
+# Sage_sage1nonorm_10_2aauycmh
+save_path='predictions/'+'pred_'+args.model
+if not os.path.isdir(save_path):
+    os.makedirs(save_path)
 
 with tf.device('/cpu:0'): # if on the cpu
-    model=tf.keras.models.load_model('../from_config/trained_models/IceCube/Sage_sage1nonorm_10_2aauycmh')
+    model=tf.keras.models.load_model(f'../from_config/trained_models/IceCube/{args.run}')
     model.compile()
 batch_size=512
 #just give the same database as you would normally run it on
-dataset =graph_data(n_data=100000,skip=0, restart=1, transform=True,\
-                    transform_path='db_files/muongun/transformers.pkl',
-                    db_path= 'db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db')
+dataset =graph_data(n_data=100000,skip=0, restart=0, transform=True,\
+                    transform_path='../db_files/muongun/transformers.pkl',
+                    db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db')
 
 #../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003----IC8611_oscNext_003_final/data/meta/transformers.pkl
 #../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003---IC8611_oscNext_003_final/data/IC8611_oscNext_003_final.db
@@ -80,5 +82,5 @@ recos.columns=reco_str
 recos.head()
 recos['event_no']=np.array(df_event['event_no'][test])
 recos.head()
-recos.to_csv(save_path)
-os.system("python submit_results.py -- --save_path {save_path} --model {} --init CKJ")
+recos.to_csv(save_path+'/preds.csv')
+os.system(f"python submit_results.py --database {args.database} --result {save_path}/preds.csv --model {args.model} --init CKJ")

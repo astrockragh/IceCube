@@ -23,15 +23,14 @@ class graph_data(Dataset):
     data that takes config file
     """
 
-    def __init__(self, frac_data = 0.5 ,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"], 
+    def __init__(self,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"], 
     targets= ["energy_log10", "zenith","azimuth"],
     transform_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/transformers.pkl',
     db_path= '../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/data/dev_lvl7_mu_nu_e_classification_v003.db', 
     set_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/sets.pkl',
-    n_neighbors = 10, restart=False, graph_construction='classic', database='submit', **kwargs):
+    n_neighbors = 30, restart=False, graph_construction='classic', database='submit', **kwargs):
 
 
-        self.frac_data = frac_data
         self.features=features
         self.targets=targets
         self.dom_norm = 1e3
@@ -140,9 +139,9 @@ class graph_data(Dataset):
         data_train   = pickle.load(open(osp.join(self.path, "data_train.dat"), 'rb'))
         print("Loading test data to memory")
         data_test   = pickle.load(open(osp.join(self.path, "data_test.dat"), 'rb'))
-        
-        dataset_train = data_train[:int(self.frac_data*len(data_train))]
+        data=[data_train, data_test]
+        # dataset_train = data_train[:int(self.frac_data*len(data_train))]
 
-        dataset_test  = data_test[:int(self.frac_data*len(data_test))]
+        # dataset_test  = data_test[:int(self.frac_data*len(data_test))]
 
-        return dataset_train, dataset_test
+        return data

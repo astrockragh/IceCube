@@ -26,7 +26,7 @@ class graph_data(Dataset):
         targets= ["energy_log10", "zenith","azimuth"], muon = True, skip = 0,\
         transform_path='../db_files/muongun/transformers.pkl',\
              db_path= '../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db',\
-                  n_neighbors = 10, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
+                  n_neighbors = 6, restart=False, data_split = [0.8, 0.1, 0.1], graph_construction='classic', database='MuonGun', **kwargs):
 
 
         self.n_data = int(n_data)
@@ -54,7 +54,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.database}_muon_{self.muon}_n_data_{self.n_data}_type_{self.graph_construction}_nn_{self.n_neighbors}")
+        path = osp.join(cwd, f"processed/{self.database}_muon_{self.muon}_n_data_{self.n_data}_type_{self.graph_construction}")
         return path
 
     def reload(self):
@@ -76,19 +76,30 @@ class graph_data(Dataset):
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
                 # Find indices to cut after
+                try:
+                    if self.muon:
+                        print('Loading Muons')
+                        start_id = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip}").fetchall()[0][0]
+                        stop_id  = conn.execute(f"select distinct event_no from features where event_no>=138674340 limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
+                    else:
+                        print('Loading Neutrinos')
+                        start_id = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip}").fetchall()[0][0]
+                        stop_id  = conn.execute(f"select distinct event_no from features limit 1 offset {self.skip + self.n_data}").fetchall()[0][0]
+                except:
+                    ""
+                    start_id = 0
+                    stop_id  = 100
                 # SQL queries format
                 feature_call = ", ".join(self.features)
                 target_call  = ", ".join(self.targets)
                 
                 # Load data from db-file
                 print("Reading files")
-                print('reading event')
-                df_event = read_sql(f"select event_no       from features ", conn)
-                print('reading features')
-                df_feat  = read_sql(f"select {feature_call} from features", conn)
-                print('reading targets')
-                df_targ  = read_sql(f"select {target_call } from truth", conn)
-                print('Transforming')
+                
+                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
+                
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
@@ -101,9 +112,8 @@ class graph_data(Dataset):
                     # print(col)
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
-                print("Saving event nos")
-                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
-                df_event.to_csv(self.path+'/event_nos.csv')
+            
+
                 # Cut indices
                 print("Splitting data to events")
                 idx_list    = np.array(df_event)
@@ -113,10 +123,9 @@ class graph_data(Dataset):
                 xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
 
                 ys          = np.array(df_targ)
-
                 print(df_feat.head())
                 print(df_targ.head())
-                
+
                 # Generate adjacency matrices
                 print("Generating adjacency matrices")
                 graph_list = []
@@ -131,14 +140,12 @@ class graph_data(Dataset):
 
                 graph_list = np.array(graph_list, dtype = object)
 
-                import gc
-                del df_feat
-                del df_event
-                del df_targ
-                gc.collect()
+
                 print("Saving dataset")
-                pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'), protocol=2)
-            
+                pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
+                
+                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
+                df_event.to_csv(self.path+'/event_nos.csv')
         else:
             pass
         

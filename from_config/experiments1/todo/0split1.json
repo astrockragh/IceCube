@@ -1,12 +1,13 @@
 {
-    "experiment": "IceCube",
-    "group":  "muon_final", 
+    "experiment": "test",
+    "group":  "Split", 
 
-    "model_name":  "SageHop",
+    "model_name":  "KHopSplit",
+    "angle_unitvec": "split",
     "wandblog": true,
 
     "run_params":{
-    "epochs":     30,
+    "epochs":     50,
     "batch_size": 512,
     "early_stop": true,
     "zeniazi_metric":true,
@@ -25,21 +26,27 @@
     "hyper_params": {
         "n_out":           3,
         "n_sigs":          2,
-        "hidden_states":   25,
-        "conv_layers": 2,
+        "hidden_states":   32,
+        "K":      [1,2],        
+        "agg_method":   "min",
+        "glob": true,
+        "conv_layers":   2,
+        "conv_activation": "relu",
         "decode_layers":   2,
         "decode_activation": 1,
-        "dropout":         0.03,
-        "regularization": "l2"
+        "dropout":         0.05,
+        "regularization": "l2", 
+        "batch_norm":      true,
+        "forward":  true
     },
-    "oldn_data": 1.4999e6,
+
    "data_params":{ 
-    "n_data": 1.4999e6,
+    "n_data": 2e5,
     "graph_construction":       "classic_lc",
     "muon":             true,
-    "n_neighbors":       25,
+    "n_neighbors":       14,
     "data_split":      [0.8, 0.1, 0.1],
-    "restart":   false  ,
+    "restart":   false,
     "transform_path": "../db_files/muongun/transformers.pkl",
     "db_path": "../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db",
     "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses", "lc"],
