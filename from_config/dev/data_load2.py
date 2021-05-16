@@ -101,9 +101,7 @@ class graph_data(Dataset):
                     # print(col)
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
-                print("Saving event nos")
-                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
-                df_event.to_csv(self.path+'/event_nos.csv')
+            
                 # Cut indices
                 print("Splitting data to events")
                 idx_list    = np.array(df_event)
@@ -114,31 +112,39 @@ class graph_data(Dataset):
 
                 ys          = np.array(df_targ)
 
+                print("Saving event nos")
+                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
+                df_event.to_csv(self.path+'/event_nos.csv')
+
                 print(df_feat.head())
                 print(df_targ.head())
-                
+                step=len(xs)//10
+                for i in tqdm(range(10)):
                 # Generate adjacency matrices
-                print("Generating adjacency matrices")
-                graph_list = []
-                for x, y in tqdm(zip(xs, ys), total = len(xs)):
-                    try:
-                        a = knn(x[:, :3], self.n_neighbors)
-                    except:
-                        a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
+                    xsi, ysi = xs[step*(i):step*(i+1)], ys[step*(i):step*(i+1)]
+                    print(xsi)
+                    print("Generating adjacency matrices")
+                    graph_list = []
+                    for x, y in tqdm(zip(xsi, ysi), total = step):
+                        try:
+                            a = knn(x[:, :3], self.n_neighbors)
+                        except:
+                            a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
 
 
-                    graph_list.append(Graph(x = x, a = a, y = y))
+                        graph_list.append(Graph(x = x, a = a, y = y))
+                    print('List->array')
+                    graph_list = np.array(graph_list, dtype = object)
 
-                graph_list = np.array(graph_list, dtype = object)
-
-                import gc
-                del df_feat
-                del df_event
-                del df_targ
-                gc.collect()
-                print("Saving dataset")
-                pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'), protocol=2)
-            
+                    # import gc
+                    # del df_feat
+                    # del df_event
+                    # del df_targ
+                    # gc.collect()
+                    print("Saving dataset")
+                    pickle.dump(graph_list, open(osp.join(self.path, f"data_{i}.dat"), 'wb'))
+                    # with open('data.npy', 'wb') as f:
+                    #     np.save(f, graph_list)
         else:
             pass
         
@@ -148,9 +154,12 @@ class graph_data(Dataset):
             self.download()
             self.k+=1
         print("Loading data to memory")
-        data   = pickle.load(open(osp.join(self.path, "data.dat"), 'rb'))
-
-
+        data=[]
+        for i in tqdm(range(10)):
+            datai   = pickle.load(open(osp.join(self.path, f"data_{i}.dat"), 'rb'))
+            for graph in datai:
+                data.append(graph)
+       
         np.random.seed(self.seed)
         idxs = np.random.permutation(len(data))
         train_split = int(self.train_size * len(data))

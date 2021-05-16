@@ -25,12 +25,13 @@ class graph_data(Dataset):
 
     def __init__(self,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"], 
     targets= ["energy_log10", "zenith","azimuth"],
-    transform_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/transformers.pkl',
-    db_path= '../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/data/dev_lvl7_mu_nu_e_classification_v003.db', 
-    set_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/sets.pkl',
-    n_neighbors = 30, restart=False, graph_construction='classic', database='submit', **kwargs):
+    transform_path='../db_files/dev_lvl7//meta/transformers.pkl',
+    db_path= '../db_files/dev_lvl7//dev_lvl7_mu_nu_e_classification_v003.db', 
+    set_path="../db_files/dev_lvl7/sets.pkl",
+    n_neighbors = 30, restart=False, n_test='all', graph_construction='classic', database='submit', test_steps=10, **kwargs):
 
-
+        self.steps=test_steps
+        self.n_test=n_test
         self.features=features
         self.targets=targets
         self.dom_norm = 1e3
@@ -50,7 +51,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.database}_{self.n_neighbors}nn_{self.graph_construction}graph_{len(self.features)}feat")
+        path = osp.join(cwd, f"processed/{self.database}_{self.n_neighbors}nn_{self.graph_construction}graph_{len(self.features)}feat_test")
         return path
 
     def reload(self):
@@ -69,23 +70,31 @@ class graph_data(Dataset):
         # Get raw_data
         # Make output folder
         os.makedirs(self.path)
-        train_events, test_events=self.get_event_no()
-        events=[train_events,test_events]
-        for i, train_test in enumerate(['train','test']):
+        _, test_events=self.get_event_no()
+        if self.n_test=='all':
+            events=test_events
+        else:
+            # events=train_events[:self.n_train]
+            events=test_events[:self.n_test]
+        events=np.array_split(events, self.steps)
+        for i in tqdm(range(self.steps)):
+            eventsi=events[i]
+            print(f'Reading {len(eventsi)} events')
             db_file  = self.db_path
             print("Connecting to db-file")
             with sqlite3.connect(db_file) as conn:
                 # SQL queries format
                 feature_call = ", ".join(self.features)
                 target_call  = ", ".join(self.targets)
-                event_nos=tuple(events[i].reshape(1, -1)[0])
+                event_nos=tuple(eventsi.reshape(1, -1)[0])
                 # Load data from db-file
                 print("Reading files")
                 df_event = read_sql(f"select event_no from features where event_no in {event_nos}", conn)
+                print(df_event.head())
                 print("Events read")
                 df_feat  = read_sql(f"select {feature_call} from features where event_no in {event_nos}", conn)
                 print("Features read")
-                df_targ  = read_sql(f"select {target_call } from truth where event_no in {event_nos}", conn)
+                df_targ  = read_sql(f"select {target_call}, event_no from truth where event_no in {event_nos}", conn)
                 print("Truth read")
 
                 transformers = pickle.load(open(self.transform_path, 'rb'))
@@ -96,7 +105,7 @@ class graph_data(Dataset):
                 for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
 
-                for col in df_targ.columns:
+                for col in ["energy_log10", "zenith","azimuth"]:
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
             
@@ -126,22 +135,18 @@ class graph_data(Dataset):
                     graph_list.append(Graph(x = x, a = a, y = y))
 
                 graph_list = np.array(graph_list, dtype = object)
-
-
-                print("Saving dataset")
-                pickle.dump(graph_list, open(osp.join(self.path, f"data_{train_test}.dat"), 'wb'))
+                print(f"Saving dataset {i}")
+                pickle.dump(graph_list, open(osp.join(self.path, f"data_test_{i}.dat"), 'wb'))
         
     def read(self):
         if self.restart:
             self.reload()
             self.download()
-        print("Loading train data to memory")
-        data_train   = pickle.load(open(osp.join(self.path, "data_train.dat"), 'rb'))
         print("Loading test data to memory")
-        data_test   = pickle.load(open(osp.join(self.path, "data_test.dat"), 'rb'))
-        data=[data_train, data_test]
-        # dataset_train = data_train[:int(self.frac_data*len(data_train))]
-
-        # dataset_test  = data_test[:int(self.frac_data*len(data_test))]
+        data=[]
+        for i in tqdm(range(self.steps)):
+            datai  = pickle.load(open(osp.join(self.path, f"data_test_{i}.dat"), 'rb'))
+            for graph in datai:
+                data.append(graph)
 
         return data

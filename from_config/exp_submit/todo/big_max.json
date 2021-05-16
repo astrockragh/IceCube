@@ -1,0 +1,54 @@
+{
+    "experiment": "IceCube_neutrino",
+    "group":  "submit", 
+
+    "model_name":  "KHop",
+    "wandblog": false,
+
+    "run_params":{
+    "epochs":     50,
+    "batch_size": 512,
+    "early_stop": true,
+    "zeniazi_metric":true,
+    "patience":   7,
+    "lr_schedule": "classic",
+    "learning_rate":   1e-3,
+    "warm_up": 3,
+    "lr_decay": 0.9,
+    "val_epoch":   16,
+    "loss_func": "abs_vonMises2D_angle",
+    "metrics": "energy_angle_zeniazi",
+    "performance_plot": "performance_vM2D"
+},
+
+    "hyper_params": {
+        "n_out":           3,
+        "n_sigs":          2,
+        "K":        [1,2],
+        "agg_method": "max",
+        "hidden_states":   50,  
+        "glob": true,
+        "conv_layers":   2,
+        "conv_activation": "relu",
+        "decode_layers":   3,
+        "decode_activation": 1,
+        "dropout":         0.02,
+        "regularization": null, 
+        "batch_norm":      true,
+        "forward":  false
+    },
+
+   "data_params":{ 
+    "n_data": 1e7,
+    "graph_construction":       "classic",
+    "muon":             false,
+    "n_neighbors":       30,
+    "restart":   false,
+    "transform_path": "../db_files/dev_lvl7/transformers.pkl",
+    "db_path": "../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db",
+    "features":   ["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"],
+    "targets":    ["energy_log10", "zenith","azimuth"],
+    "database": "submit"
+}
+}
+   

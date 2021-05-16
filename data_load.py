@@ -145,10 +145,10 @@ class graph_data(Dataset):
 
 
                     graph_list.append(Graph(x = x, a = a, y = y))
-
+                    
+                print("List->array")
                 graph_list = np.array(graph_list, dtype = object)
-
-
+                
                 print("Saving dataset")
                 pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
         else:

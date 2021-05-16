@@ -26,28 +26,37 @@ def train_model(construct_dict):
     ################################################
     #   Load dataset                              #
     ################################################
-    from dev.data_load2 import graph_data
-    #load dataset
+    # import dev.submit_traindata as dl
+    # # reload(dl)
+    # dataset_train=dl.graph_data(**construct_dict['data_params'])
+
+    import dev.submit_testdata as dl
+    # reload(dl)
+    dataset_test=dl.graph_data(**construct_dict['data_params'])
+    dataset_train=dataset_test
+
     epochs      = int(construct_dict['run_params']['epochs'])
     batch_size  = int(construct_dict['run_params']['batch_size'])
     
-    dataset=graph_data(**construct_dict['data_params'])
-    df=dataset.df_event
 
-    def get_event_no(set_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/sets.pkl'):
-        import pandas as pd
-        print('Reading sets')
-        sets = pd.read_pickle(set_path)
-        train_events = sets['train']
-        test_events = sets['test']
-        return train_events['event_no'].to_numpy(), test_events['event_no'].to_numpy()
+    # # df=dataset.df_event
 
-    train_events, test_event = get_event_no()
-    idx_lists = [np.array(df[df['event_no'].isin(train_events)].index), np.array(df[df['event_no'].isin(test_events)].index)] 
-    # Split data
-    # dataset_train = dataset[idx_lists[0]]
-    dataset_train = dataset[idx_lists[0]]
-    dataset_test = dataset[idx_lists[1]]
+    # # def get_event_no(set_path='../../../../pcs557/databases/dev_lvl7_mu_nu_e_classification_v003/meta/sets.pkl'):
+    # #     import pandas as pd
+    # #     print('Reading sets')
+    # #     sets = pd.read_pickle(set_path)
+    # #     train_events = sets['train']
+    # #     test_events = sets['test']
+    # #     return train_events['event_no'].to_numpy(), test_events['event_no'].to_numpy()
+
+    # # train_events, test_events = get_event_no()
+    # idx_lists = [np.array(df[df['event_no'].isin(train_events)].index), np.array(df[df['event_no'].isin(test_events)].index)] 
+    # print(len(idx_lists[0]), max(idx_lists[0]), len(idx_lists[1]), max(idx_lists[1]))
+    # # Split data
+    # # dataset_train = dataset[idx_lists[0]]
+    # print(len(dataset))
+    # dataset_train = dataset[idx_lists[0][:-4]]
+    # dataset_test = dataset[idx_lists[1]]
     print('Loaded datasets')
     dataset_val   = dataset_test
     # dataset_test  = dataset[idx_lists[2]]
@@ -166,12 +175,13 @@ def train_model(construct_dict):
         pbar.set_description(f"Epoch {current_epoch} / {epochs}; Avg_loss: {loss / current_batch:.6f}")
         
         if current_batch == loader_train.steps_per_epoch:
+        # if current_batch == :
             t=time.time() - start_time
             tot_time+=t
             print(f"Epoch {current_epoch} of {epochs} done in {t:.2f} seconds using learning rate: {learning_rate:.2E}")
             print(f"Avg loss of train: {loss / loader_train.steps_per_epoch:.6f}")
 
-            loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
+            loader_val    = DisjointLoader(dataset_val[:10000], epochs = 1,      batch_size = batch_size)
             val_loss, val_loss_from, val_metric = validation(loader_val)
             if wandblog:
                 wandb.log({"Train Loss":      loss / loader_train.steps_per_epoch,

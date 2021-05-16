@@ -80,7 +80,7 @@ def abs_negcos_angle(y_reco, y_true, re=False):
 
 def abs_vonMises_angle(y_reco, y_true, re=False):
     #energy
-    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0])))
+    loss_energy = tf.reduce_mean(tf.abs(tf.subtract(y_reco[:,0], y_true[:,0]))) #mae
     tf.debugging.assert_all_finite(loss_energy, 'Energy problem', name=None)
     #angle
     kappa=tf.math.abs(y_reco[:,3])+eps
@@ -118,10 +118,10 @@ def abs_vonMises_unit(y_reco, y_true, re=False):
 
 def abs_vonMises2D_angle(y_reco, y_true, re=False):
     #energy
-    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0])))
+    loss_energy = reduce_mean(abs(subtract(y_reco[:,0], y_true[:,0]))) #mae again
 
-    polar_k     = abs(y_reco[:, 3])
-    zenth_k     = abs(y_reco[:, 4])
+    polar_k     = abs(y_reco[:, 3])+eps
+    zenth_k     = abs(y_reco[:, 4])+eps
 
     cos_azi     = cos(subtract(y_true[:,2], y_reco[:,2]))
 
