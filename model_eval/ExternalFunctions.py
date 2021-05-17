@@ -5,7 +5,7 @@
 
 import numpy as np
 
-def format_value(value, decimals=3):
+def format_value(value, decimals):
     """ 
     Checks the type of a variable and formats it accordingly.
     Floats has 'decimals' number of decimals.
@@ -19,7 +19,7 @@ def format_value(value, decimals=3):
         return f'{value}'
 
 
-def values_to_string(values, decimals=3):
+def values_to_string(values, decimals):
     """ 
     Loops over all elements of 'values' and returns list of strings
     with proper formating according to the function 'format_value'. 
@@ -53,11 +53,11 @@ def nice_string_output(d, extra_spacing=5, decimals=3):
     
     values = values_to_string(d.values(), decimals=decimals)
     max_values = len_of_longest_string(values)
-    print(values)
+    
     string = ""
     for name, value in zip(names, values):
         spacing = extra_spacing + max_values + max_names - len(name) - 1 
-        string += "{name:s} {value:.f>{spacing}} \n".format(name=name, value=value, spacing=spacing)
+        string += "{name:s} {value:>{spacing}} \n".format(name=name, value=value, spacing=spacing)
     return string[:-2]
 
 

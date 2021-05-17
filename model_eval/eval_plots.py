@@ -81,7 +81,7 @@ def performance_vM2D(y_reco, y_true, metrics=energy_angle_zeniazi, save=False, s
         zenith.append(zeni)
         azimuth.append(azi)
     all_e, old_e, all_a, all_z, all_az = metrics(y_reco, y_true)
-    title={r'median +- $\sigma$': ''}
+    title={'median +- sig': ''}
     summary={'E': f'{all_e[1]:.3f}, {all_e[0]:.3f}<->{all_e[2]:.3f}',
     'Omega': f'{all_a[1]:.3f}, {all_a[0]:.3f}<->{all_a[2]:.3f}',
     'Zeni': f'{all_z[1]:.3f}, {all_z[0]:.3f}<->{all_z[2]:.3f}',
@@ -121,16 +121,17 @@ def performance_vM2D(y_reco, y_true, metrics=energy_angle_zeniazi, save=False, s
     ax_top[2].set_title("Angle Performance") 
     ax_top[2].set_ylabel(r"$\Delta \Omega$")
 
-    text=nice_string_output(title, extra_spacing=2, decimals=3)
-    add_text_to_ax(0.05, 0.92, text, ax_top[3], fontsize=14)
+#     text=nice_string_output(title, extra_spacing=2, decimals=3)
+#     add_text_to_ax(0.05, 0.92, text, ax_top[3], fontsize=14)
 
-    text=nice_string_output(summary, extra_spacing=2)
-    add_text_to_ax(0.05, 0.85, text, ax_top[3], fontsize=14)
+#     text=nice_string_output(summary, extra_spacing=2, decimals=3)
+#     add_text_to_ax(0.05, 0.85, text, ax_top[3], fontsize=14)
 
-    text=nice_string_output(summary_old, extra_spacing=2, decimals=3)
-    add_text_to_ax(0.05, 0.4, text, ax_top[3], fontsize=14)
-    for axi in ax_top:
-        axi.legend()
+#     text=nice_string_output(summary_old, extra_spacing=2, decimals=3)
+#     add_text_to_ax(0.05, 0.4, text, ax_top[3], fontsize=14)
+#     for axi in ax_top:
+#         axi.legend()
+    print(summary_old, summary)
     #Zenith reconstructi
     ax_z=ax[1]
 

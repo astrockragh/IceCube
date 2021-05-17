@@ -96,10 +96,13 @@ class graph_data(Dataset):
                 # Load data from db-file
                 print("Reading files")
                 
-                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
-                df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
                 
+                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                print('Events read')
+                df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                print('Features read')
+                df_targ  = read_sql(f"select {target_call }, pid from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
+                print('Targets read, transforming')
                 transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
@@ -108,16 +111,20 @@ class graph_data(Dataset):
                 for col in ["dom_x", "dom_y", "dom_z"]:
                     df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
 
-                for col in df_targ.columns:
+                for col in ["energy_log10", "zenith","azimuth"]:
                     # print(col)
                     df_targ[col] = trans_y[col].inverse_transform(np.array(df_targ[col]).reshape(1, -1)).T
             
             
-
+                
                 # Cut indices
                 print("Splitting data to events")
                 idx_list    = np.array(df_event)
                 x_not_split = np.array(df_feat)
+                print(df_event.head())
+                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
+                print(df_feat.head())
+                df_event.to_csv(self.path+'/event_nos.csv')
 
                 _, idx, counts = np.unique(idx_list.flatten(), return_index = True, return_counts = True) 
                 xs          = np.split(x_not_split, np.cumsum(counts)[:-1])
@@ -126,9 +133,8 @@ class graph_data(Dataset):
                 print(df_feat.head())
                 print(df_targ.head())
 
+                graph_list=[]
                 # Generate adjacency matrices
-                print("Generating adjacency matrices")
-                graph_list = []
                 for x, y in tqdm(zip(xs, ys), total = len(xs)):
                     try:
                         a = knn(x[:, :3], self.n_neighbors)
@@ -137,15 +143,18 @@ class graph_data(Dataset):
 
 
                     graph_list.append(Graph(x = x, a = a, y = y))
-
+                print('List->array')
                 graph_list = np.array(graph_list, dtype = object)
 
-
+                # import gc
+                # del df_feat
+                # del df_event
+                # del df_targ
+                # gc.collect()
                 print("Saving dataset")
-                pickle.dump(graph_list, open(osp.join(self.path, "data.dat"), 'wb'))
-                
-                df_event=DataFrame(df_event.event_no.drop_duplicates()).reset_index(drop=True)
-                df_event.to_csv(self.path+'/event_nos.csv')
+                pickle.dump(graph_list, open(osp.join(self.path, f"data.dat"), 'wb'))
+                # with open('data.npy', 'wb') as f:
+                #     np.save(f, graph_list)
         else:
             pass
         
@@ -155,9 +164,10 @@ class graph_data(Dataset):
             self.download()
             self.k+=1
         print("Loading data to memory")
-        data   = pickle.load(open(osp.join(self.path, "data.dat"), 'rb'))
-
-
+        
+        data=pickle.load(open(osp.join(self.path, f"data.dat"), 'rb'))
+       
+        
         np.random.seed(self.seed)
         idxs = np.random.permutation(len(data))
         train_split = int(self.train_size * len(data))
