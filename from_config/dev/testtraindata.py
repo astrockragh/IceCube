@@ -27,9 +27,9 @@ class graph_data(Dataset):
             transform_path='../db_files/dev_lvl7/transformers.pkl',\
                 db_path= '../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db',\
                  set_path='../db_files/dev_lvl7/sets.pkl',\
-                  n_neighbors = 30, restart=False, graph_construction='classic', **kwargs):
+                  n_neighbors = 30, restart=False, graph_construction='classic', traintest='train', i_train=0, i_test=0, **kwargs):
 
-
+        self.traintest=traintest
         self.n_steps=n_steps
         self.set_path=set_path
         self.features=features
@@ -41,8 +41,8 @@ class graph_data(Dataset):
         self.restart=restart
         self.graph_construction=graph_construction
         self.k=0
-        self.i_test=0
-        self.i_train=0
+        self.i_test=i_test
+        self.i_train=i_train
         super().__init__(**kwargs)
     
     @property
@@ -101,8 +101,8 @@ class graph_data(Dataset):
             testid, trainid=df_test.index.to_numpy(), df_train.index.to_numpy()
             mask_test, mask_train= [], []
             for i in range(self.n_steps):
-                mask_test.append(np.in1d(splits[0], test_events))
-                mask_train.append(np.in1d(splits[0], train_events))
+                mask_test.append(np.in1d(splits[i], test_events))
+                mask_train.append(np.in1d(splits[i], train_events))
             
             print('Saving test/train IDs')
             pickle.dump(testid, open(osp.join(self.path, "testid.pkl"), 'wb'))
@@ -164,30 +164,32 @@ class graph_data(Dataset):
             self.reload()
             self.download()
             self.k+=1
-        print("Loading data to memory")
-        data=[]
-        for i in tqdm(range(self.n_steps)):
-            if i==0:
-                datai  = pickle.load(open(osp.join(self.path, f"test_{i}.dat"), 'rb'))
-                for i, graph in enumerate(datai):
-                    if i==0:
-                        data.append(graph)
         
-        self.train_idx=pickle.load(open(osp.join(self.path, "trainid.pkl"), 'rb'))
-        self.test_idx=pickle.load(open(osp.join(self.path, "testid.pkl"), 'rb'))
-        print("Remember to run read train/test")
+        data=[]
+        if self.traintest=='train':
+            print(f"Loading train data {self.i_train} to memory")
+            datai  = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
+        if self.traintest=='test':
+            print(f"Loading test data {self.i_test} to memory")
+            datai  = pickle.load(open(osp.join(self.path, f"test_{self.i_train}.dat"), 'rb'))
+        for i, graph in enumerate(datai):
+            data.append(graph)
         return data
 
-    def read_train(self):
-        print("Loading train data to memory")
-        data=[]
-        data = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
-        self.i_train+=1
-        return data
+    # def read_train(self):
+    #     print("Loading train data to memory")
+    #     data=[]
+    #     datai = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
+    #     for graph in datai:
+    #         data.append(graph)
+    #     self.i_train+=1
+    #     return data
 
-    def read_test(self):
-        print("Loading test data to memory")
-        data=[]
-        data = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
-        self.i_test+=1
-        return data
+    # def read_test(self):
+    #     print("Loading test data to memory")
+    #     data=[]
+    #     datai = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
+    #     for graph in datai:
+    #         data.append(graph)
+    #     self.i_test+=1
+    #     return data
