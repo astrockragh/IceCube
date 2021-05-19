@@ -41,6 +41,7 @@ class graph_data(Dataset):
         self.restart=restart
         self.graph_construction=graph_construction
         self.k=0
+        self.i=0
         super().__init__(**kwargs)
     
     @property
@@ -49,7 +50,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/{self.n_steps}_type_{self.graph_construction}_nn_{self.n_neighbors}")
+        path = osp.join(cwd, f"processed/type_{self.graph_construction}_nn_{self.n_neighbors}")
         return path
 
     def reload(self):
