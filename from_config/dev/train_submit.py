@@ -30,7 +30,7 @@ def train_model(construct_dict):
     # # reload(dl)
     # dataset_train=dl.graph_data(**construct_dict['data_params'])
 
-    import dev.testtraindata as dl
+    import dev.datawhere as dl
     graph_data=dl.graph_data
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
     dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
@@ -143,7 +143,11 @@ def train_model(construct_dict):
     summarylist=[]
     for j in range(epochs):
         for i in range(n_steps):
-            dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i)
+            if n_steps!=10:
+                i_t=np.random.randint(0,10)
+            else:
+                i_t=i
+            dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i_t)
             loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
             for batch in loader_train:
                 inputs, targets = batch
@@ -161,14 +165,14 @@ def train_model(construct_dict):
                 pbar.update(1)
                 pbar.set_description(f"Epoch {current_epoch} / {epochs}; Avg_loss: {loss / current_batch:.6f}")
                 
-                if current_batch == loader_train.steps_per_epoch and i==(n_steps-1):
+                if current_batch == loader_train.steps_per_epoch*n_steps:
                 # if current_batch == :
                     t=time.time() - start_time
                     tot_time+=t
                     print(f"Epoch {current_epoch} of {epochs} done in {t:.2f} seconds using learning rate: {learning_rate:.2E}")
                     print(f"Avg loss of train: {loss / (loader_train.steps_per_epoch*n_steps):.6f}")
 
-                    loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
+                    loader_val    = DisjointLoader(dataset_val[::2], epochs = 1,      batch_size = batch_size)
                     val_loss, val_loss_from, val_metric = validation(loader_val)
                     if wandblog:
                         wandb.log({"Train Loss":      loss / (loader_train.steps_per_epoch*n_steps),
@@ -216,7 +220,7 @@ def train_model(construct_dict):
                         return current_epoch
 
                     if current_epoch != epochs:
-                        pbar          = tqdm(total = loader_train.steps_per_epoch, position=0, leave = True)
+                        pbar          = tqdm(total = loader_train.steps_per_epoch*n_steps, position=0, leave = True)
 
                     learning_rate = next(lr_schedule)
                     opt.learning_rate.assign(learning_rate)
@@ -227,7 +231,7 @@ def train_model(construct_dict):
                         print("Model saved")
                         if wandblog:
                             loader_test = DisjointLoader(dataset_test, batch_size=batch_size, epochs=1)
-                            fig, _ = performance_plot(loader_test, test_step, metrics, save=True, save_path=save_path)
+                            fig, _ = performance_plot(loader_test, test_step, metrics, bins=20, save=True, save_path=save_path)
                             title="performanceplot_"+str(current_epoch)
                             wandb.log({title: [wandb.Image(fig, caption=title)]})
                 
