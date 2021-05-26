@@ -30,11 +30,11 @@ def train_model(construct_dict):
     # # reload(dl)
     # dataset_train=dl.graph_data(**construct_dict['data_params'])
 
-    import dev.datawhere as dl
+    import dev.testtraindata as dl
     graph_data=dl.graph_data
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
-    dataset_val   = graph_data(**construct_dict['data_params'], traintest='test', i_test=1)
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
+    dataset_val   = graph_data(**construct_dict['data_params'], traintest='mix')
 
     graph_data.traintest='train'
     epochs      = int(construct_dict['run_params']['epochs'])
@@ -143,11 +143,11 @@ def train_model(construct_dict):
     summarylist=[]
     for j in range(epochs):
         for i in range(n_steps):
-            if n_steps!=10:
-                i_t=np.random.randint(0,10)
-            else:
-                i_t=i
-            dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i_t)
+            # if n_steps!=10:
+            #     i_t=np.random.randint(0,10)
+            # else:
+            #     i_t=i
+            dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i)
             loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
             for batch in loader_train:
                 inputs, targets = batch
@@ -172,7 +172,7 @@ def train_model(construct_dict):
                     print(f"Epoch {current_epoch} of {epochs} done in {t:.2f} seconds using learning rate: {learning_rate:.2E}")
                     print(f"Avg loss of train: {loss / (loader_train.steps_per_epoch*n_steps):.6f}")
 
-                    loader_val    = DisjointLoader(dataset_val[::2], epochs = 1,      batch_size = batch_size)
+                    loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
                     val_loss, val_loss_from, val_metric = validation(loader_val)
                     if wandblog:
                         wandb.log({"Train Loss":      loss / (loader_train.steps_per_epoch*n_steps),

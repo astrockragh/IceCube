@@ -94,11 +94,6 @@ class graph_data(Dataset):
                 stop_ids.append(splits[i][-1])
                 
             train_events, test_events=self.get_event_no()
-            df_sort=df_truth.sort_values('event_no')
-            df_sort=df_sort.reset_index(drop=True)
-            df_test=df_sort[df_sort['event_no'].isin(test_events)]
-            df_train=df_sort[df_sort['event_no'].isin(train_events)]
-            testid, trainid=df_test.index.to_numpy(), df_train.index.to_numpy()
             mask_test, mask_train= [], []
             for i in range(self.n_steps):
                 mask_test.append(np.in1d(splits[i], test_events))
@@ -109,6 +104,7 @@ class graph_data(Dataset):
             pickle.dump(trainid, open(osp.join(self.path, "trainid.pkl"), 'wb'))
             print('Starting loop')
             print(start_ids, stop_ids)
+            mix_list=[]
             for i, (start_id, stop_id) in enumerate(zip(start_ids, stop_ids)):
                 df_event = read_sql(f"select event_no from features where event_no >= {start_id} and event_no <= {stop_id}", conn)
                 print('Events read')
@@ -145,20 +141,27 @@ class graph_data(Dataset):
                 graph_list=[]
                 # Generate adjacency matrices
                 for x, y in tqdm(zip(xs, ys), total = len(xs)):
-                    try:
-                        a = knn(x[:, :3], self.n_neighbors)
-                    except:
+                    if self.graph_construction=='classic'
+                        try:
+                            a = knn(x[:, :3], self.n_neighbors)
+                        except:
+                            a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
+                        graph_list.append(Graph(x = x, a = a, y = y))
+                    if self.graph_construction=='full':
                         a = csr_matrix(np.ones(shape = (x.shape[0], x.shape[0])) - np.eye(x.shape[0]))
-                    graph_list.append(Graph(x = x, a = a, y = y))
+                        graph_list.append(Graph(x = x, a = a, y = y))
+                        
                 print('List->array')
                 graph_list = np.array(graph_list, dtype = object)
                 test_list = graph_list[mask_test[i]]
                 train_list = graph_list[mask_train[i]]
-            
-                print(f"Saving dataset: {len(test_list)} test, {len(train_list)} train")
+                mix_list.append(test_list[::10])
+                print(f"Saving dataset {i}: {len(test_list)} test, {len(train_list)} train")
                 # pickle.dump(graph_list, open(osp.join(self.path, f"data_{i}.dat"), 'wb'))
                 pickle.dump(test_list, open(osp.join(self.path, f"test_{i}.dat"), 'wb'))
                 pickle.dump(train_list, open(osp.join(self.path, f"train_{i}.dat"), 'wb'))
+            mix_list = [graph for gl in mix_list for graph in gl]
+            pickle.dump(mix_list, open(osp.join(self.path, f"mix.dat"), 'wb'))
     def read(self):
         if self.restart and self.k==0:
             self.reload()
@@ -172,6 +175,9 @@ class graph_data(Dataset):
         if self.traintest=='test':
             print(f"Loading test data {self.i_test} to memory")
             datai  = pickle.load(open(osp.join(self.path, f"test_{self.i_train}.dat"), 'rb'))
+        if self.traintest=='mix':
+            print(f"Loading mixed data to memory")
+            datai  = pickle.load(open(osp.join(self.path, f"mix.dat"), 'rb'))
         for i, graph in enumerate(datai):
             data.append(graph)
         return data
