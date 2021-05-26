@@ -8,6 +8,7 @@ db_files
 wandb.ipynb
 wandb
 input.py
+from_config/processed
 from_config/nohup.out
 from_config_dev/nohup.out
 compare/nohup.out
