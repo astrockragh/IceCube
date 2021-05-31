@@ -22,7 +22,6 @@ SHUTDOWN = False
 # Generate list over experiments to run
 from dev.utils import list_experiments
 from dev.generate import test_data
-clean_done(exp0_folder)
 exp_folder, exp_list = list_experiments(exp0_folder)
 
 print(f"Starting process with {len(exp_list)} experiments")
@@ -33,6 +32,7 @@ for i, experiment in enumerate(exp_list):
     # Load construction dictionary from json file
     with open(osp.join(exp_folder, experiment)) as file:
         construct_dict = json.load(file)
+    construct_dict['data_params']['n_steps']=10
     construct_dict['experiment_name']=experiment[:-5]
     construct_dict['data_params']['restart']=True
     construct_dict['wandblog']=False
