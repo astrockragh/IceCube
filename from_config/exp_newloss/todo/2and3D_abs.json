@@ -44,7 +44,7 @@
         "n_steps": 10,
         "graph_construction":       "classic",
         "muon":             false,
-        "n_neighbors":       30,
+        "n_neighbors":       31,
         "restart":   false,
         "transform_path": "../db_files/dev_lvl7/transformers.pkl",
         "db_path": "../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db",

@@ -184,7 +184,7 @@ class graph_data(Dataset):
             datai  = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
         if self.traintest=='test':
             print(f"Loading test data {self.i_test} to memory")
-            datai  = pickle.load(open(osp.join(self.path, f"test_{self.i_train}.dat"), 'rb'))
+            datai  = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
         if self.traintest=='mix':
             print(f"Loading mixed data to memory")
             datai  = pickle.load(open(osp.join(self.path, f"mix.dat"), 'rb'))
