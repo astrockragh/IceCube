@@ -33,8 +33,12 @@ def train_model(construct_dict):
     import dev.testtraindata as dl
     graph_data=dl.graph_data
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
-    dataset_val   = graph_data(**construct_dict['data_params'], traintest='mix')
+    if construct_dict['run_params']['mix']:
+        dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
+        dataset_val   = graph_data(**construct_dict['data_params'], traintest='mix')
+    else:
+        dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
+        dataset_val   = graph_data(**construct_dict['data_params'], traintest='test', i_test=1)
 
     graph_data.traintest='train'
     epochs      = int(construct_dict['run_params']['epochs'])
@@ -195,14 +199,23 @@ def train_model(construct_dict):
                                 "azimuth sig+1":   val_metric[4][2],
                                 "Learning rate":   learning_rate})
                     print("\n")
-                    if not construct_dict['run_params']['zeniazi_metric']:
+                    if construct_dict['run_params']['print_metric']=='base':
                         print(f"Avg loss of validation: {val_loss:.6f}")
                         print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Angle: {val_loss_from[1]:.6f} ")
                         print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
                             \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}")
-                    else:
+
+                    if construct_dict['run_params']['print_metric']=='zeniazi':                    
                         print(f"Avg loss of validation: {val_loss:.6f}")
-                        print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Angle: {val_loss_from[1]:.6f} ")
+                        print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}")
+                        print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
+                            \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
+                            \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\
+                            \n Azimuth: bias = {val_metric[4][1]:.6f} sig_range = {val_metric[4][0]:.6f}<->{val_metric[4][2]:.6f}, old metric {val_metric[4][3]:.6f}")
+
+                    if construct_dict['run_params']['print_metric']=='zeniaziangle':
+                        print(f"Avg loss of validation: {val_loss:.6f}")
+                        print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}, \t Angle {val_loss_from[3]:.6f}")
                         print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
                             \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
                             \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\

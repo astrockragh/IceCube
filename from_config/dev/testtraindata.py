@@ -1,5 +1,5 @@
 import numpy as np
-import os, sqlite3, pickle, sys, gzip, shutil
+import os, sqlite3, pickle, sys, gzip, shutil, time
 if hasattr(__builtins__,'__IPYTHON__'):
     print('Notebook')
     from tqdm.notebook import tqdm
@@ -99,9 +99,10 @@ class graph_data(Dataset):
                 mask_test.append(np.in1d(splits[i], test_events))
                 mask_train.append(np.in1d(splits[i], train_events))
             
-            print('Saving test/train IDs')
-            pickle.dump(testid, open(osp.join(self.path, "testid.pkl"), 'wb'))
-            pickle.dump(trainid, open(osp.join(self.path, "trainid.pkl"), 'wb'))
+            del df_truth
+            del train_events
+            del test_events
+
             print('Starting loop')
             print(start_ids, stop_ids)
             mix_list=[]
@@ -137,11 +138,13 @@ class graph_data(Dataset):
                 ys          = np.array(df_targ)
                 print(df_feat.head())
                 print(df_targ.head())
-
+                del df_feat
+                del df_targ
+                del df_event
                 graph_list=[]
                 # Generate adjacency matrices
                 for x, y in tqdm(zip(xs, ys), total = len(xs)):
-                    if self.graph_construction=='classic'
+                    if self.graph_construction=='classic':
                         try:
                             a = knn(x[:, :3], self.n_neighbors)
                         except:
@@ -158,8 +161,15 @@ class graph_data(Dataset):
                 mix_list.append(test_list[::10])
                 print(f"Saving dataset {i}: {len(test_list)} test, {len(train_list)} train")
                 # pickle.dump(graph_list, open(osp.join(self.path, f"data_{i}.dat"), 'wb'))
+                start1=time.time()
                 pickle.dump(test_list, open(osp.join(self.path, f"test_{i}.dat"), 'wb'))
+                stop=time.time()
+                print(f'Saved test in {stop-start1} s')
+                start=time.time()
                 pickle.dump(train_list, open(osp.join(self.path, f"train_{i}.dat"), 'wb'))
+                stop=time.time()
+                print(f'Saved train in {stop-start} s')
+                print(f'Both saved in {stop-start1} s')
             mix_list = [graph for gl in mix_list for graph in gl]
             pickle.dump(mix_list, open(osp.join(self.path, f"mix.dat"), 'wb'))
     def read(self):
@@ -181,21 +191,3 @@ class graph_data(Dataset):
         for i, graph in enumerate(datai):
             data.append(graph)
         return data
-
-    # def read_train(self):
-    #     print("Loading train data to memory")
-    #     data=[]
-    #     datai = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
-    #     for graph in datai:
-    #         data.append(graph)
-    #     self.i_train+=1
-    #     return data
-
-    # def read_test(self):
-    #     print("Loading test data to memory")
-    #     data=[]
-    #     datai = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
-    #     for graph in datai:
-    #         data.append(graph)
-    #     self.i_test+=1
-    #     return data

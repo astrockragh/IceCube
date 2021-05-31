@@ -1,31 +1,32 @@
 {
     "experiment": "IceCube_neutrino",
-    "group":  "submit1", 
+    "group":  "new_loss", 
 
     "model_name":  "KHop",
     "wandblog": false,
 
     "run_params":{
-    "epochs":     50,
-    "batch_size": 512,
+    "epochs":     10,
+    "batch_size": 1024,
     "early_stop": true,
-    "zeniazi_metric":true,
-    "patience":   7,
+    "print_metric":"zeniaziangle",
+    "patience":   5,
     "lr_schedule": "classic",
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
     "val_epoch":   10,
-    "loss_func": "abs_vonMises2D_angle",
+    "loss_func": "sqr_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
-    "performance_plot": "performance_vM2D"
+    "performance_plot": "performance_vM2D",
+    "mix": false
 },
 
     "hyper_params": {
         "n_out":           3,
         "n_sigs":          2,
         "K":        [1,2],
-        "agg_method": "prod",
+        "agg_method": "max",
         "hidden_states":   40,  
         "glob": true,
         "conv_layers":   2,
@@ -37,6 +38,7 @@
         "batch_norm":      true,
         "forward":  false
     },
+
 
     "data_params":{ 
         "n_steps": 10,

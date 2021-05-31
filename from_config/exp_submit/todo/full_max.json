@@ -6,8 +6,8 @@
     "wandblog": false,
 
     "run_params":{
-    "epochs":     50,
-    "batch_size": 512,
+    "epochs":     10,
+    "batch_size": 1024,
     "early_stop": true,
     "zeniazi_metric":true,
     "patience":   7,
@@ -40,7 +40,7 @@
 
    "data_params":{ 
     "n_steps": 10,
-    "graph_construction":       "classic",
+    "graph_construction":       "full",
     "muon":             false,
     "n_neighbors":       30,
     "restart":   false,
