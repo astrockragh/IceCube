@@ -15,11 +15,12 @@
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   10,
+    "val_epoch":   5,
     "loss_func": "abs_vonMises23D_angle",
     "metrics": "energy_angle_zeniazi",
     "performance_plot": "performance_vM23D",
-    "mix": false
+    "mix": true,
+    "retrain_model": "KHop_2and3D_abs_vxq38be0"
 },
 
     "hyper_params": {

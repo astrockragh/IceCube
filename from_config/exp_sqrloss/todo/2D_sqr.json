@@ -9,17 +9,18 @@
     "epochs":     10,
     "batch_size": 1024,
     "early_stop": true,
-    "print_metric":"zeniaziangle",
+    "print_metric":"zeniazi",
     "patience":   5,
     "lr_schedule": "classic",
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   10,
+    "val_epoch":   5,
     "loss_func": "sqr_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
     "performance_plot": "performance_vM2D",
-    "mix": false
+    "mix": true,
+    "retrain_model": "KHop_2D_sqr_1vceubg1"
 },
 
     "hyper_params": {

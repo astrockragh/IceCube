@@ -325,7 +325,7 @@ def performance_zeniazi(loader, test_step, metrics, save=False, save_path=''):
         plt.savefig(save_path)
     return fig, ax
 
-def performance_vM2D(loader, test_step, metrics, save=False, save_path=''):
+def performance_vM2D(loader, test_step, metrics, bins=20, save=False, save_path=''):
 
     '''Function to test and plot performance of Graph DL
     input should be dom pos x,y,z , time, charge(log10)
@@ -346,7 +346,7 @@ def performance_vM2D(loader, test_step, metrics, save=False, save_path=''):
     y_true  = tf.cast(y_true, tf.float32).numpy()
 
     energy = y_true[:, 0]
-    counts, bins = np.histogram(energy, bins = 20)
+    counts, bins = np.histogram(energy, bins = bins)
     xs = (bins[1:] + bins[: -1]) / 2
     w_energies, u_angles = [], []
     e_sig, alpha_sig = [], [] 
@@ -405,9 +405,9 @@ def performance_vM2D(loader, test_step, metrics, save=False, save_path=''):
     ax_z[0].set_ylabel(r"$\Delta \Theta$")
     
     reszeni=zeni_res(y_true, y_reco)
-    ax_z[1].hist(reszeni, label = "ML reco - Truth", histtype = "step", bins = 50)
-    ax_z[1].hist(y_reco[:, 1], label = "ML reco", histtype = "step", bins = 50)
-    ax_z[1].hist(y_true[:, 1], label = "Truth", histtype = "step", bins = 50)
+    ax_z[1].hist(reszeni, label = "ML reco - Truth", histtype = "step", bins = 100)
+    ax_z[1].hist(y_reco[:, 1], label = "ML reco", histtype = "step", bins = 100)
+    ax_z[1].hist(y_true[:, 1], label = "Truth", histtype = "step", bins = 100)
     
     ax_z[1].set_title("Zenith Perfomance")
     ax_z[1].set_ylabel(r"$\Theta$")
@@ -458,7 +458,7 @@ def performance_vM2D(loader, test_step, metrics, save=False, save_path=''):
         plt.savefig(save_path+'.png')
     return fig, ax
 
-def performance_vM23D(loader, test_step, metrics, save=False, save_path=''):
+def performance_vM23D(loader, test_step, metrics, bins=20, save=False, save_path=''):
     '''Function to test and plot performance of Graph DL
     input should be dom pos x,y,z , time, charge(log10)
     target should be energy(log10),zenith angle, azimuthal angle, NOT unit vec 
@@ -478,7 +478,7 @@ def performance_vM23D(loader, test_step, metrics, save=False, save_path=''):
     y_true  = tf.cast(y_true, tf.float32).numpy()
 
     energy = y_true[:, 0]
-    counts, bins = np.histogram(energy, bins = 20)
+    counts, bins = np.histogram(energy, bins = bins)
     xs = (bins[1:] + bins[: -1]) / 2
     w_energies, u_angles = [], []
     e_sig, alpha_sig = [], [] 

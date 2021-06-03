@@ -7,18 +7,20 @@
 
     "run_params":{
     "epochs":     10,
-    "batch_size": 1024,
+    "batch_size": 256,
     "early_stop": true,
-    "zeniazi_metric":true,
-    "patience":   7,
+    "print_metric":"zeniazi",
+    "patience":   5,
     "lr_schedule": "classic",
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   10,
+    "val_epoch":   5,
     "loss_func": "abs_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
-    "performance_plot": "performance_vM2D"
+    "performance_plot": "performance_vM2D",
+    "mix": true,
+    "retrain_model": false 
 },
 
     "hyper_params": {
@@ -42,7 +44,7 @@
     "n_steps": 10,
     "graph_construction":       "full",
     "muon":             false,
-    "n_neighbors":       30,
+    "n_neighbors":       1000,
     "restart":   false,
     "transform_path": "../db_files/dev_lvl7/transformers.pkl",
     "db_path": "../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db",

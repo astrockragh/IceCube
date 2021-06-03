@@ -35,7 +35,7 @@ def train_model(construct_dict):
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
     if construct_dict['run_params']['mix']:
         dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
-        dataset_val   = graph_data(**construct_dict['data_params'], traintest='mix')
+        dataset_val   = dataset_test
     else:
         dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
         dataset_val   = graph_data(**construct_dict['data_params'], traintest='test', i_test=1)
@@ -66,7 +66,13 @@ def train_model(construct_dict):
     ################################################
 
     # Get model, metrics, lr_schedule and loss function
-    model, model_path     = setup_model(construct_dict)
+    if construct_dict['run_params']['retrain_model']==False:
+        model, model_path     = setup_model(construct_dict)
+    else:
+        model_path=osp.join(cwd, "trained_models/IceCube_neutrino", construct_dict['run_params']['retrain_model']) 
+        model=tf.keras.models.load_model(model_path)
+        model.compile()  
+        
     loss_func             = get_loss_func(construct_dict['run_params']['loss_func'])
     metrics               = get_metrics(construct_dict['run_params']['metrics'])
     performance_plot      = get_performance(construct_dict['run_params']['performance_plot'])
@@ -135,6 +141,7 @@ def train_model(construct_dict):
     #  Train Model                                 #      
     ################################################
     n_steps=construct_dict['data_params']['n_steps']
+    steps_per_epoch=loader_train.steps_per_epoch
     tot_time=0
     current_batch = 0
     current_epoch = 1
@@ -142,7 +149,7 @@ def train_model(construct_dict):
     lowest_loss   = np.inf
     early_stop    = 1
     early_stop_counter    = 0
-    pbar          = tqdm(total = loader_train.steps_per_epoch*n_steps, position=0, leave = True)
+    pbar          = tqdm(total = steps_per_epoch*n_steps, position=0, leave = True)
     start_time    = time.time()
     summarylist=[]
     for j in range(epochs):
@@ -153,6 +160,7 @@ def train_model(construct_dict):
             #     i_t=i
             dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i)
             loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
+            loader_train=loader_train.load().prefetch(1)
             for batch in loader_train:
                 inputs, targets = batch
                 out             = train_step(inputs, targets)
@@ -169,17 +177,17 @@ def train_model(construct_dict):
                 pbar.update(1)
                 pbar.set_description(f"Epoch {current_epoch} / {epochs}; Avg_loss: {loss / current_batch:.6f}")
                 
-                if current_batch == loader_train.steps_per_epoch*n_steps:
+                if current_batch == steps_per_epoch*n_steps:
                 # if current_batch == :
                     t=time.time() - start_time
                     tot_time+=t
                     print(f"Epoch {current_epoch} of {epochs} done in {t:.2f} seconds using learning rate: {learning_rate:.2E}")
-                    print(f"Avg loss of train: {loss / (loader_train.steps_per_epoch*n_steps):.6f}")
+                    print(f"Avg loss of train: {loss / (steps_per_epoch*n_steps):.6f}")
 
                     loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
                     val_loss, val_loss_from, val_metric = validation(loader_val)
                     if wandblog:
-                        wandb.log({"Train Loss":      loss / (loader_train.steps_per_epoch*n_steps),
+                        wandb.log({"Train Loss":      loss / (steps_per_epoch*n_steps),
                                 "Validation Loss": val_loss, 
                                 "w(log(E))":   val_metric[1],
                                 "Energy bias":   val_metric[0][1],
@@ -233,7 +241,7 @@ def train_model(construct_dict):
                         return current_epoch
 
                     if current_epoch != epochs:
-                        pbar          = tqdm(total = loader_train.steps_per_epoch*n_steps, position=0, leave = True)
+                        pbar          = tqdm(total = steps_per_epoch*n_steps, position=0, leave = True)
 
                     learning_rate = next(lr_schedule)
                     opt.learning_rate.assign(learning_rate)
