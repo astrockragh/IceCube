@@ -6,7 +6,7 @@
     "wandblog": false,
 
     "data_params":{ 
-        "n_steps": 10,
+        "n_steps": 3,
         "graph_construction":       "muon",
         "n_neighbors":       20,
         "restart":   true,
