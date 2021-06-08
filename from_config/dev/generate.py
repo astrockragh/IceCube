@@ -24,12 +24,11 @@ def test_data(construct_dict):
         wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']+'_'+str(wandb.run.id)
     
 
-    import dev.testtraindata as dl
+    import dev.datawhere as dl
     graph_data=dl.graph_data
-    dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
+    dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=9)
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='test', i_test=9)
     dataset_val=dataset_test
-    graph_data.traintest='train'
     epochs      = int(construct_dict['run_params']['epochs'])
     batch_size  = int(construct_dict['run_params']['batch_size'])
     

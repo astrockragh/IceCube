@@ -6,12 +6,13 @@ import numpy as np
 import os.path as osp
 
 from tensorflow.keras.optimizers import Adam
+# import tensorflow_probability.distributions as tfd
 from spektral.data import DisjointLoader
 from importlib import __import__
 
 cwd = osp.abspath('')
 
-def train_model(construct_dict):
+def train_kde(construct_dict):
     """
     Train a model given a construction dictionairy
     """
@@ -30,17 +31,24 @@ def train_model(construct_dict):
     # # reload(dl)
     # dataset_train=dl.graph_data(**construct_dict['data_params'])
 
+    from dev.loss_funcs import kde
+
     import dev.testtraindata as dl
     graph_data=dl.graph_data
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    if construct_dict['run_params']['mix']:
-        dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
-        dataset_val   = dataset_test
-    else:
-        dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
-        dataset_val   = graph_data(**construct_dict['data_params'], traintest='test', i_test=1)
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
+    dataset_val   = dataset_test
 
-    graph_data.traintest='train'
+
+
+    zenith=[]
+    print('Making kde true')
+    for i in range(len(dataset_val)):
+        zenith.append(dataset_val[i].y[1])
+    X=np.array(zenith).reshape(-1,1)
+    X=tf.convert_to_tensor(X.flatten(), tf.float32)
+    kdet=kde(X)
+
     epochs      = int(construct_dict['run_params']['epochs'])
     batch_size  = int(construct_dict['run_params']['batch_size'])
     
@@ -66,12 +74,8 @@ def train_model(construct_dict):
     ################################################
 
     # Get model, metrics, lr_schedule and loss function
-    if construct_dict['run_params']['retrain_model']==False:
-        model, model_path     = setup_model(construct_dict)
-    else:
-        model_path=osp.join(cwd, "trained_models/IceCube_neutrino", construct_dict['run_params']['retrain_model']) 
-        model=tf.keras.models.load_model(model_path)
-        model.compile()  
+
+    model, model_path     = setup_model(construct_dict)
         
     loss_func             = get_loss_func(construct_dict['run_params']['loss_func'])
     metrics               = get_metrics(construct_dict['run_params']['metrics'])
@@ -129,7 +133,7 @@ def train_model(construct_dict):
         y_true  = tf.concat(target_list, axis = 0)
         y_true  = tf.cast(y_true, tf.float32)
 
-        loss, loss_from = loss_func(y_reco, y_true, re=True)
+        loss, loss_from = loss_func(y_reco, y_true, kdet, re=True)
         
         energy, e_old, alpha, zeni, azi= metrics(y_reco, y_true)
         
@@ -140,6 +144,7 @@ def train_model(construct_dict):
     ################################################
     #  Train Model                                 #      
     ################################################
+    import gc
     n_steps=construct_dict['data_params']['n_steps']
     steps_per_epoch=loader_train.steps_per_epoch
     tot_time=0
@@ -158,9 +163,12 @@ def train_model(construct_dict):
             #     i_t=np.random.randint(0,10)
             # else:
             #     i_t=i
+            del dataset_train
+            del loader_train
+            gc.collect()
             dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i)
             loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
-            loader_train=loader_train.load().prefetch(1)
+            # loader_train=loader_train.load().prefetch(1)
             for batch in loader_train:
                 inputs, targets = batch
                 out             = train_step(inputs, targets)
@@ -208,12 +216,13 @@ def train_model(construct_dict):
                                 "Learning rate":   learning_rate})
                     print("\n")
 
-                    print(f"Avg loss of validation: {val_loss:.6f}")
-                    print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}, \t Distribution {val_loss_from[3]:.6f}")
-                    print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
-                        \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
-                        \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\
-                        \n Azimuth: bias = {val_metric[4][1]:.6f} sig_range = {val_metric[4][0]:.6f}<->{val_metric[4][2]:.6f}, old metric {val_metric[4][3]:.6f}")
+                    if construct_dict['run_params']['print_metric']=='zeniaziangle':
+                        print(f"Avg loss of validation: {val_loss:.6f}")
+                        print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}, \t Hist {val_loss_from[3]:.6f}")
+                        print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
+                            \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
+                            \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\
+                            \n Azimuth: bias = {val_metric[4][1]:.6f} sig_range = {val_metric[4][0]:.6f}<->{val_metric[4][2]:.6f}, old metric {val_metric[4][3]:.6f}")
 
                     if val_loss < lowest_loss:
                         early_stop_counter = 0

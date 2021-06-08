@@ -1,0 +1,21 @@
+{
+    "experiment": "IceCube_neutrino",
+    "group":  "submit", 
+
+    "model_name":  "KHop",
+    "wandblog": false,
+
+    "data_params":{ 
+        "n_steps": 10,
+        "graph_construction":       "classic",
+        "muon":             false,
+        "n_neighbors":       30,
+        "restart":   false,
+        "transform_path": "../db_files/dev_lvl7/transformers.pkl",
+        "db_path": "../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db",
+        "features":   ["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"],
+        "targets":    ["energy_log10", "zenith","azimuth","event_no"],
+        "database": "submit"
+    }
+}
+   

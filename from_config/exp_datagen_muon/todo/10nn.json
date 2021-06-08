@@ -1,0 +1,21 @@
+{
+    "experiment": "IceCube_neutrino",
+    "group":  "submit", 
+
+    "model_name":  "KHop",
+    "wandblog": false,
+
+    "data_params":{ 
+        "n_steps": 10,
+        "graph_construction":       "muon",
+        "n_neighbors":       10,
+        "restart":   false,
+        "transform_path": "../db_files/muongun/transformers.pkl",
+        "db_path": "../db_files/muongun/rasmus_classification_muon_3neutrino_3mio.db",
+        "features":   ["dom_x", "dom_y", "dom_z", "time", "charge_log10", "SRTInIcePulses", "string", "dom", "lc", "pulse_width"],
+        "set_path": "../db_files/muongun/sets.pkl",
+        "targets":    ["energy_log10", "zenith","azimuth"],
+        "database": "muon"
+    }
+}
+   

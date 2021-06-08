@@ -1,6 +1,6 @@
 import numpy as np
-import os, sqlite3, pickle, sys, gzip, shutil
-from tqdm.notebook import tqdm
+import os, sqlite3, pickle, sys, gzip, shutil, time
+from tqdm import tqdm
 import os.path as osp
 
 from pandas import read_sql, read_pickle, concat, read_csv, DataFrame
@@ -18,7 +18,7 @@ class graph_data(Dataset):
     """
 
     def __init__(self, n_steps=10 ,features=["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10", "width", "rqe"], \
-        targets= ["energy_log10", "zenith","azimuth", "event_no"],\
+        targets= ["energy_log10", "zenith","azimuth"],\
             transform_path='../db_files/dev_lvl7/transformers.pkl',\
                 db_path= '../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db',\
                  set_path='../db_files/dev_lvl7/sets.pkl',\
@@ -46,7 +46,7 @@ class graph_data(Dataset):
         Set the path of the data to be in the processed folder
         """
         cwd = osp.abspath('')
-        path = osp.join(cwd, f"processed/all_{self.graph_construction}_{self.n_neighbors}")
+        path = osp.join(cwd, f"processed/where_{self.graph_construction}_{self.n_neighbors}")
         return path
 
     def reload(self):
@@ -59,12 +59,15 @@ class graph_data(Dataset):
         sets = read_pickle(self.set_path)
         train_events = sets['train']
         test_events = sets['test']
-        return train_events['event_no'].to_numpy(), test_events['event_no'].to_numpy()
-    
+        if self.graph_construction=='classic':
+            return train_events['event_no'].to_numpy(), test_events['event_no'].to_numpy()
+        if self.graph_construction=='muon':
+            return train_events.to_numpy(), test_events.to_numpy()
     def check_dataset(self):
         return osp.exists(self.path)
 
     def download(self):
+        self.k+=1
         # Get raw_data
         db_file   = self.db_path
 
@@ -80,27 +83,26 @@ class graph_data(Dataset):
             target_call  = ", ".join(self.targets)
 
             # Load data from db-file
-            print("Reading files")
 
             train_events, test_events=self.get_event_no()
+            np.random.shuffle(train_events)
+            np.random.shuffle(test_events)
             train_events = np.array_split(train_events,self.n_steps)
             test_events  = np.array_split(test_events,self.n_steps)
 
             for i, (train, test) in enumerate(zip(train_events, test_events)):
                 for tt, events in zip(['train', 'test'], [train, test]):
-                    # events=events[:10000]
-                    df_event = read_sql(f"select event_no from features where event_no in {tuple(events)}", conn)
-                    print('Events read')
-                    df_feat  = read_sql(f"select {feature_call}, event_no from features where event_no in {tuple(events)}", conn)
+                    print("Reading files")
+                    start=time.time()
+                    df_feat  = read_sql(f"select {feature_call}, event_no from features where event_no in {tuple(events)}", conn).sort_values('event_no')
                     print('Features read')
-                    df_targ  = read_sql(f"select {target_call} from truth where event_no in {tuple(events)}", conn)
+                    df_targ  = read_sql(f"select {target_call}, event_no from truth where event_no in {tuple(events)}", conn).sort_values('event_no')
                     print('Targets read, transforming')
                     transformers = pickle.load(open(self.transform_path, 'rb'))
+                    stop=time.time()
+                    print(f"Reading {tt} {i} took {np.round(stop-start, 2)} s")
                     trans_x      = transformers['features']
                     trans_y      = transformers['truth']
-                    if tt=='test':
-                        print('Saving test event nos')
-                        df_event.to_csv(osp.join(self.path, f"testeventno_{i}.csv"))
                     for col in ["dom_x", "dom_y", "dom_z"]:
                         df_feat[col] = trans_x[col].inverse_transform(np.array(df_feat[col]).reshape(1, -1)).T/self.dom_norm
 
@@ -112,7 +114,8 @@ class graph_data(Dataset):
 
                     # Cut indices
                     print("Splitting data to events")
-                    idx_list    = np.array(df_event)
+                    idx_list    = np.array(df_feat['event_no'])
+                    df_feat.drop('event_no', axis=1, inplace=True)
                     x_not_split = np.array(df_feat)
 
                     _, idx = np.unique(idx_list.flatten(), return_index = True) 
@@ -134,15 +137,16 @@ class graph_data(Dataset):
                     graph_list = np.array(graph_list, dtype = object)
                 
                     print(f"Saving dataset {tt} {i}: {len(graph_list)} {tt}")
-                    # pickle.dump(graph_list, open(osp.join(self.path, f"data_{i}.dat"), 'wb'))
                     pickle.dump(graph_list, open(osp.join(self.path, f"{tt}_{i}.dat"), 'wb'))
+                    stop=time.time()
+                    print(f"Process {tt} {i} took {np.round(stop-start, 2)} s")
                     
-
+ 
     def read(self):
         if self.restart and self.k==0:
             self.reload()
             self.download()
-            self.k+=1
+        
         
         data=[]
         if self.traintest=='train':

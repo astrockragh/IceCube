@@ -1,4 +1,4 @@
-import os, sys, tqdm, json, shutil, glob, argparse
+import os, json, argparse
 
 import os.path as osp
 
@@ -32,15 +32,7 @@ for i, experiment in enumerate(exp_list):
     # Load construction dictionary from json file
     with open(osp.join(exp_folder, experiment)) as file:
         construct_dict = json.load(file)
-    construct_dict['data_params']['n_steps']=10
     construct_dict['experiment_name']=experiment[:-5]
-    # construct_dict['data_params']['restart']=True
-    construct_dict['wandblog']=False
-    # data_exists=check_dataset(construct_dict['data_params']['database'], construct_dict['data_params']['muon'],\
-    #      construct_dict['data_params']['n_data'], construct_dict['data_params']['graph_construction'])
-    # if data_exists:
-    #     print('No data construction required')
-    #     construct_dict['data_params']['restart']=False
 
 
     print(f"Starting experiment from {experiment[:-5]}")
