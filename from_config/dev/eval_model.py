@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.math import sin, cos, acos, abs, reduce_mean, subtract, square
 import warnings
+from tqdm import tqdm
 from scipy.stats import norm
 warnings.filterwarnings("ignore")
 
@@ -27,7 +28,16 @@ def azi_res(y_true, y_reco):
 
 def zeni_res(y_true, y_reco):
     diffs = tf.minimum(abs(y_true[:, 1] - y_reco[:, 1]), abs(y_true[:, 1] - y_reco[:, 1])%(np.pi))
-    return diffs.numpy()    
+    return diffs.numpy() 
+
+def mazi_res(y_true, y_reco):
+    diffs = y_true[:, 2] - y_reco[:, 2]
+    return diffs
+
+
+def mzeni_res(y_true, y_reco):
+    diffs = y_true[:, 1] - y_reco[:, 1]
+    return diffs
 
 def alpha_from_angle(y_reco, y_true):
     zep, zet, azp, azt = y_reco[:,1], y_true[:,1], y_reco[:,2], y_true[:,2]
@@ -36,6 +46,20 @@ def alpha_from_angle(y_reco, y_true):
     alpha=acos(cosalpha)
     return alpha
 
+from scipy.special import iv
+
+def approx(x):
+    x=np.array(x)
+    a=1-3/(8*x)
+    b=1+1/(8*x)
+    return a/b
+
+def kap_to_sig(kappa):
+    kappa =  np.sqrt(kappa**2) + eps
+    sigs=np.where(kappa>50, np.sqrt(abs(np.sqrt(-2*np.log(approx(kappa))))), np.sqrt(abs(np.sqrt(-2*np.log(iv(1,kappa)/iv(0,kappa))))))
+    return sigs
+
+sigs=kap_to_sig(np.arange(0,100,20))
 
 ##consider making pull_plot
 
@@ -453,6 +477,147 @@ def performance_vM2D(loader, test_step, metrics, bins=20, save=False, save_path=
     ax_az[3].set(xlabel=r"$\kappa$", ylabel=r"$\Delta \phi$")
     for axi in ax_az:
         axi.legend()
+    fig.tight_layout()
+    if save:
+        plt.savefig(save_path+'.png')
+    return fig, ax
+
+def performance_vM2D_sig(loader, test_step, metrics, bins=20, save=False, save_path=''):
+
+    '''Function to test and plot performance of Graph DL
+    target should be energy(log10),zenith angle, azimuthal angle, NOT unit vec 
+    '''
+    loss = 0
+    prediction_list, target_list = [], []
+    for batch in tqdm(loader, total=loader.steps_per_epoch):
+        inputs, targets = batch
+        predictions, targets, out = test_step(inputs, targets)
+        loss           += out
+        
+        prediction_list.append(predictions)
+        target_list.append(targets)
+
+    y_reco  = tf.concat(prediction_list, axis = 0).numpy()
+    y_true  = tf.concat(target_list, axis = 0)
+    y_true  = tf.cast(y_true, tf.float32).numpy()
+
+    energy = y_true[:, 0]
+    counts, bins = np.histogram(energy, bins = bins)
+    xs = (bins[1:] + bins[: -1]) / 2
+    w_energies, u_angles = [], []
+    e_sig, alpha_sig = [], [] 
+    old_energy, old_alpha = [], []
+    zenith, azimuth = [], []
+    for i in range(len(bins)-1):
+        idx = np.logical_and(energy > bins[i], energy < bins[i + 1])
+        e, old_e, angle, zeni, azi = metrics(y_reco[idx, :], y_true[idx, :])
+        old_energy.append(old_e)
+        old_alpha.append(angle[3])
+        w_energies.append(e[1])
+        u_angles.append(angle[1])
+        e_sig.append([e[0], e[2]])
+        alpha_sig.append([angle[0], angle[2]])
+        zenith.append(zeni)
+        azimuth.append(azi)
+    zenith, azimuth =  np.array(zenith), np.array(azimuth)
+    fig, ax = plt.subplots(ncols = 4, nrows = 3, figsize = (20, 15))
+    axesback=[(0,0), (0,2), (1,0), (2,0)]
+    for i,j in axesback:
+        a_ = ax[i][j].twinx()
+        a_.step(xs, counts, color = "gray", zorder = 10, alpha = 0.7, where = "mid")
+        a_.set_yscale("log")
+        ax[i][j].set_xlabel("Log(E)")
+
+    
+    # Energy reconstruction
+    ax_top = ax[0]
+
+    ax_top[0].errorbar(xs, w_energies,yerr=np.array(e_sig).T, fmt='k.',capsize=2,linewidth=1,ecolor='r',label='data')
+    ax_top[0].plot(xs, old_energy, 'bo', label=r"$w(\Delta log(E))$"+'(old metric)')
+    ax_top[0].set_title("Energy Performance")
+    ax_top[0].set_ylabel(r"$\Delta log(E)$")
+
+
+    ax_top[1].hist2d(y_true[:,0], y_reco[:,0], bins=100,\
+                   range=[np.percentile(y_true[:,0],[1,99]), np.percentile(y_reco[:,0],[1,99])])
+    ax_top[1].set_title("ML Reco/True")
+    ax_top[1].set(xlabel="Truth (log(E))", ylabel="ML Reco (log(E))")
+    ax_top[1].plot([np.percentile(y_true[:,0],[1]), np.percentile(y_true[:,0],[99])], [np.percentile(y_true[:,0],[1]), np.percentile(y_true[:,0],[99])], 'w--')
+
+    ax_top[2].errorbar(xs, u_angles,yerr=np.array(alpha_sig).T, fmt='k.',capsize=2,linewidth=1,ecolor='r',label=r'Median $\pm \sigma$')
+    ax_top[2].plot(xs, old_alpha, 'bo', label=r"$w(\Omega)$"+'(old metric)')
+    ax_top[2].set_title("Angle Performance") 
+    ax_top[2].set_ylabel(r"$\Delta \Omega$")
+
+    c=180/np.pi
+    for axi in ax_top:
+        axi.legend()
+    #Zenith reconstructi
+    ax_z=ax[1]
+    
+    ax_z[0].errorbar(xs, zenith[:,1],yerr=[zenith[:,0], zenith[:,2]], fmt='k.',capsize=2,linewidth=1,ecolor='r',label=r'Median $\pm \sigma$')
+    ax_z[0].set_title("Zenith Performance")
+    ax_z[0].plot(xs, zenith[:,3], 'bo', label='68th')
+    ax_z[0].set_ylabel(r"$\Delta \Theta$")
+    
+    reszeni=zeni_res(y_true, y_reco)*c
+    ax_z[1].hist(reszeni, label = "ML reco - Truth", histtype = "step", bins = 100)
+    ax_z[1].hist(y_reco[:, 1]*c, label = "ML reco", histtype = "step", bins = 100)
+    ax_z[1].hist(y_true[:, 1]*c, label = "Truth", histtype = "step", bins = 100)
+    
+    ax_z[1].set_title("Zenith Perfomance")
+    ax_z[1].set_ylabel(r"$\Theta$")
+
+    ax_z[2].hist2d(y_true[:,1]*c, y_reco[:,1]*c, bins=100,range=[[0,np.pi*c], [0,np.pi*c]])
+    ax_z[2].set_title("Zenith truth/reco correlation")
+    ax_z[2].set(xlabel=r"True", ylabel=r"ML reco")
+    ax_z[2].plot([0, np.pi*c], [0,np.pi*c], 'w--')
+    sigz=kap_to_sig(y_reco[:,3])*c
+#     return sigz
+    reszeni=mzeni_res(y_true, y_reco)*c
+    ax_z[3].hist2d(sigz, reszeni, bins=100,\
+                  range=[np.percentile(sigz,[1,99]), np.percentile(reszeni,[1,99])])
+    ax_z[3].set_title("ML Kappa correlation with zenith error")
+    ax_z[3].set(xlabel=r"$\sigma_{\theta}$", ylabel=r"$\Delta \Theta$")
+    for axi in ax_z:
+        axi.legend()
+    #Azimuth reconstruction
+    
+    ax_az=ax[2]
+
+    ax_az[0].errorbar(xs, azimuth[:,1],yerr=[azimuth[:,0], azimuth[:,2]], fmt='k.',capsize=2,linewidth=1,ecolor='r',label=r'Median $\pm \sigma$')
+    ax_az[0].set_title("Azimuth Performance")
+    ax_az[0].plot(xs, azimuth[:,3], 'bo', label='68th')
+    ax_az[0].set_ylabel(r"$\Delta \phi$")
+    
+    resazi=azi_res(y_true,y_reco)*c
+    ax_az[1].hist(resazi, label = "ML reco - Truth", histtype = "step", bins = 50)
+    ax_az[1].hist((y_reco[:, 2]%(2*np.pi))*c, label = "ML reco", histtype = "step", bins = 50)
+    ax_az[1].hist(y_true[:, 2]*c, label = "Truth", histtype = "step", bins = 50)
+    
+    ax_az[1].set_title("Azimuth Perfomance")
+    ax_az[1].set_ylabel(r"$\phi$")
+    
+    ax_az[2].hist2d(y_true[:,2]*c, y_reco[:,2]*c, bins=100,\
+                  range=[[0,2*np.pi*c], [0,2*np.pi*c]])
+    ax_az[2].set_title("Azimuth truth/reco correlation")
+    ax_az[2].set(xlabel=r"True", ylabel=r"ML reco")
+    ax_az[2].plot([0, 2*np.pi], [0,2*np.pi], 'w--')
+    
+    sigaz=kap_to_sig(y_reco[:,4])*c
+    
+    resazi=mazi_res(y_true, y_reco)*c
+    ax_az[3].hist2d(sigaz, resazi, bins=100,\
+                  range=[np.percentile(sigaz,[1,99]), np.percentile(resazi,[1,99])])
+    ax_az[3].set_title("ML Kappa correlation with azimuth error")
+    ax_az[3].set(xlabel=r"$\sigma_{\phi}$", ylabel=r"$\Delta \phi$")
+    for axi in ax_az:
+        axi.legend()
+    ax_top[3].hist(resazi/sigaz, bins=100, density=1, alpha=0.4, range=[-6,6], label='pull_azi')
+    _,bins,_=ax_top[3].hist(reszeni/sigz, bins=100, density=1, alpha=0.4, range=[-6,6], label='pull_zeni')
+    from scipy.stats import norm
+    ax_top[3].plot(bins, norm.pdf(bins,0,1), label='True unit gauss')
+    ax_top[3].legend()
     fig.tight_layout()
     if save:
         plt.savefig(save_path+'.png')
