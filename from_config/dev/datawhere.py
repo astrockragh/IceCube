@@ -154,25 +154,7 @@ class graph_data(Dataset):
             data  = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
         if self.traintest=='test':
             print(f"Loading test data {self.i_test} to memory")
-            data  = pickle.load(open(osp.join(self.path, f"test_{self.i_train}.dat"), 'rb'))
+            data  = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
         # for i, graph in enumerate(datai):
         #     data.append(graph)
         return data
-
-    # def read_train(self):
-    #     print("Loading train data to memory")
-    #     data=[]
-    #     datai = pickle.load(open(osp.join(self.path, f"train_{self.i_train}.dat"), 'rb'))
-    #     for graph in datai:
-    #         data.append(graph)
-    #     self.i_train+=1
-    #     return data
-
-    # def read_test(self):
-    #     print("Loading test data to memory")
-    #     data=[]
-    #     datai = pickle.load(open(osp.join(self.path, f"test_{self.i_test}.dat"), 'rb'))
-    #     for graph in datai:
-    #         data.append(graph)
-    #     self.i_test+=1
-    #     return data
