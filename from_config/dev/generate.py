@@ -26,11 +26,10 @@ def test_data(construct_dict):
 
     import dev.datawhere as dl
     graph_data=dl.graph_data
-    dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=9)
-    dataset_test=graph_data(**construct_dict['data_params'], traintest='test', i_test=9)
+    dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=construct_dict['data_params']['n_steps']-1)
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='test', i_test=construct_dict['data_params']['n_steps']-1)
     dataset_val=dataset_test
-    epochs      = int(construct_dict['run_params']['epochs'])
-    batch_size  = int(construct_dict['run_params']['batch_size'])
+    batch_size=512
     
   
     print('Loaded datasets')
@@ -61,6 +60,7 @@ def test_data(construct_dict):
 
         return predictions, targets, out
     print("Data generated, everything looks good!")
+    return 1
     ################################################
 
 

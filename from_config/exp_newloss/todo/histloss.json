@@ -18,7 +18,7 @@
     "val_epoch":   1,
     "loss_func": "abs_vM2D_KDE",
     "metrics": "energy_angle_zeniazi",
-    "performance_plot": "performance_vM2D"
+    "performance_plot": "performance_vM2D_sig"
 },
 
     "hyper_params": {
@@ -43,7 +43,7 @@
         "n_steps":10,
         "graph_construction":       "classic",
         "muon":             false,
-        "n_neighbors":       31,
+        "n_neighbors":       35,
         "restart":   false,
         "transform_path": "../db_files/dev_lvl7/transformers.pkl",
         "db_path": "../db_files/dev_lvl7/dev_lvl7_mu_nu_e_classification_v003.db",

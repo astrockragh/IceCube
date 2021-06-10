@@ -33,10 +33,10 @@ def train_kde(construct_dict):
 
     from dev.loss_funcs import kde
 
-    import dev.testtraindata as dl
+    import dev.datawhere as dl
     graph_data=dl.graph_data
     dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
     dataset_val   = dataset_test
 
 

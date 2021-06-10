@@ -43,14 +43,8 @@ for i, experiment in enumerate(exp_list):
     with open(osp.join(exp_folder, experiment)) as file:
         construct_dict = json.load(file)
     construct_dict['experiment_name']=experiment[:-5]
-    # construct_dict['data_params']['n_neigbors']=30
     construct_dict['data_params']['restart']=False
-    construct_dict['wandblog']=True
-    # data_exists=check_dataset(construct_dict['data_params']['database'], construct_dict['data_params']['muon'],\
-    #      construct_dict['data_params']['n_data'], construct_dict['data_params']['graph_construction'])
-    # if data_exists:
-    #     print('No data construction required')
-    #     construct_dict['data_params']['restart']=False
+
 
 
     print(f"Starting experiment from {experiment[:-5]}")

@@ -19,6 +19,7 @@ def train_model(construct_dict):
     # Setup Log 
     wandblog=construct_dict["wandblog"]
     if wandblog:
+        print('Logging to wandb')
         import wandb
         run = wandb.init(project = construct_dict["experiment"], entity = "chri862z", group=construct_dict["group"], config = construct_dict, reinit=True, settings=wandb.Settings(start_method="fork"))
         wandb.run.name = construct_dict['model_name']+'_'+construct_dict['experiment_name']+'_'+str(wandb.run.id)
@@ -30,15 +31,9 @@ def train_model(construct_dict):
     # # reload(dl)
     # dataset_train=dl.graph_data(**construct_dict['data_params'])
 
-    import dev.testtraindata as dl
+    import dev.datawhere as dl
     graph_data=dl.graph_data
-    dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
-    if construct_dict['run_params']['mix']:
-        dataset_test=graph_data(**construct_dict['data_params'], traintest='mix')
-        dataset_val   = dataset_test
-    else:
-        dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
-        dataset_val   = graph_data(**construct_dict['data_params'], traintest='test', i_test=1)
+    dataset_test=graph_data(**construct_dict['data_params'], traintest='test')
 
     graph_data.traintest='train'
     epochs      = int(construct_dict['run_params']['epochs'])
@@ -47,10 +42,8 @@ def train_model(construct_dict):
   
     print('Loaded datasets')
     
-
-    loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
     loader_test = DisjointLoader(dataset_test, batch_size=batch_size, epochs=1)
-
+    dataset_val=dataset_test
 
      ###############################################
     #   Setup other run params                     #
@@ -93,12 +86,12 @@ def train_model(construct_dict):
 
 
     # Define training function
-    @tf.function(input_signature = loader_train.tf_signature(), experimental_relax_shapes = True)
+    @tf.function(input_signature = loader_test.tf_signature(), experimental_relax_shapes = True)
     def train_step(inputs, targets):
         with tf.GradientTape() as tape:
             predictions = model(inputs, training = True)
             targets     = tf.cast(targets, tf.float32)
-            loss        = loss_func(predictions, targets, kdet)
+            loss        = loss_func(predictions, targets)
             loss       += sum(model.losses)
 
         gradients = tape.gradient(loss, model.trainable_variables)
@@ -109,7 +102,7 @@ def train_model(construct_dict):
     def test_step(inputs, targets):
         predictions = model(inputs, training = False)
         targets     = tf.cast(targets, tf.float32) 
-        out         = loss_func(predictions, targets, kdet)
+        out         = loss_func(predictions, targets)
 
         return predictions, targets, out
 
@@ -141,6 +134,8 @@ def train_model(construct_dict):
     #  Train Model                                 #      
     ################################################
     n_steps=construct_dict['data_params']['n_steps']
+    dataset_train=graph_data(**construct_dict['data_params'], traintest='train')
+    loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
     steps_per_epoch=loader_train.steps_per_epoch
     tot_time=0
     current_batch = 0
@@ -154,13 +149,8 @@ def train_model(construct_dict):
     summarylist=[]
     for j in range(epochs):
         for i in range(n_steps):
-            # if n_steps!=10:
-            #     i_t=np.random.randint(0,10)
-            # else:
-            #     i_t=i
             dataset_train=graph_data(**construct_dict['data_params'], traintest='train', i_train=i)
             loader_train = DisjointLoader(dataset_train, epochs=1, batch_size=batch_size)
-            loader_train=loader_train.load().prefetch(1)
             for batch in loader_train:
                 inputs, targets = batch
                 out             = train_step(inputs, targets)
@@ -173,6 +163,28 @@ def train_model(construct_dict):
                         for s in summarylist:
                             table.add_data(s)
                         wandb.log({'Model summary': table})
+                        loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
+                        val_loss, val_loss_from, val_metric = validation(loader_val)
+                        if wandblog:
+                            wandb.log({"Train Loss":      loss / (steps_per_epoch*n_steps),
+                                    "Validation Loss": val_loss, 
+                                    "w(log(E))":   val_metric[1],
+                                    "Energy bias":   val_metric[0][1],
+                                    "Energy sig-1":   val_metric[0][0],
+                                    "Energy sig+1":   val_metric[0][2],
+                                    "Solid angle 68th":    val_metric[2][3],
+                                    "Angle bias":   val_metric[2][1],
+                                    "Angle sig-1":   val_metric[2][0],
+                                    "Angle sig+1":   val_metric[2][2],
+                                    "zenith 68th":    val_metric[3][3],
+                                    "zenith bias":   val_metric[3][1],
+                                    "zenith sig-1":   val_metric[3][0],
+                                    "zenith sig+1":   val_metric[3][2],
+                                    "azimuth 68th":    val_metric[4][3],
+                                    "azimuth bias":   val_metric[4][1],
+                                    "azimuth sig-1":   val_metric[4][0],
+                                    "azimuth sig+1":   val_metric[4][2],
+                                    "Learning rate":   learning_rate})
                 current_batch  += 1
                 pbar.update(1)
                 pbar.set_description(f"Epoch {current_epoch} / {epochs}; Avg_loss: {loss / current_batch:.6f}")
@@ -209,7 +221,7 @@ def train_model(construct_dict):
                     print("\n")
 
                     print(f"Avg loss of validation: {val_loss:.6f}")
-                    print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}, \t Distribution {val_loss_from[3]:.6f}")
+                    print(f"Loss from:  Energy: {val_loss_from[0]:.6f} \t Zenith: {val_loss_from[1]:.6f} \t Azimuth {val_loss_from[2]:.6f}")
                     print(f"Energy: bias = {val_metric[0][1]:.6f} sig_range = {val_metric[0][0]:.6f}<->{val_metric[0][2]:.6f}, old metric {val_metric[1]:.6f}\
                         \n Angle: bias = {val_metric[2][1]:.6f} sig_range = {val_metric[2][0]:.6f}<->{val_metric[2][2]:.6f}, old metric {val_metric[2][3]:.6f}\
                         \n Zenith: bias = {val_metric[3][1]:.6f} sig_range = {val_metric[3][0]:.6f}<->{val_metric[3][2]:.6f}, old metric {val_metric[3][3]:.6f}\

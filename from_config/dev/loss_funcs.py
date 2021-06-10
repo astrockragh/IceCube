@@ -198,7 +198,7 @@ def abs_vM2D_KDE(y_reco, y_true, kdet, re=False):
     loss_azi=reduce_mean( - llh_azi)
     loss_zenith=reduce_mean( - llh_zenith)
     kder=kde(tf.cast(y_reco[:,1], tf.float32))
-    kdeloss=tf.reduce_mean(tf.math.abs(kdet.log_prob(xkde)-kder.log_prob(xkde)))*2
+    kdeloss=tf.reduce_mean(tf.math.abs(kdet.log_prob(xkde)-kder.log_prob(xkde)))/2
     
     if not re:
         return loss_azi+loss_zenith+loss_energy+tf.cast(kdeloss, tf.float32)
@@ -226,7 +226,7 @@ def abs_vM2D_KDE_weak(y_reco, y_true, kdet, re=False):
     loss_azi=reduce_mean( - llh_azi)
     loss_zenith=reduce_mean( - llh_zenith)
     kder=kde(tf.cast(y_reco[:,1], tf.float32))
-    kdeloss=tf.reduce_mean(tf.math.abs(kdet.log_prob(xkde)-kder.log_prob(xkde)))
+    kdeloss=tf.reduce_mean(tf.math.abs(kdet.log_prob(xkde)-kder.log_prob(xkde)))/10
     
     if not re:
         return loss_azi+loss_zenith+loss_energy+tf.cast(kdeloss, tf.float32)
