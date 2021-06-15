@@ -18,13 +18,15 @@ from spektral.data import Dataset, Graph
 import tensorflow as tf
 
 features = ["dom_x", "dom_y", "dom_z", "time", "charge_log10"]
+# features = ["dom_x", "dom_y", "dom_z", "dom_time", "charge_log10"]
 targets  = ["energy_log10", "zenith","azimuth"]
 
 import warnings
 warnings.filterwarnings("ignore")
 # %matplotlib inline
 
-def inspect(event=0, muon=True, event_no=None, angle=45, save=False, degree=False, hist=False, transform_path='../db_files', db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db'):
+def inspect(event=0, muon=True, event_no=None, n_neighbors=20, angle=45, save=False, degree=False, hist=False, transform_path='../db_files/MuonGun/transformers.pkl', db_path='../db_files/MuonGun/rasmus_classification_muon_3neutrino_3mio.db'):
+    
     '''Plot a graph in 3d, where the colour is determined by time and the size of the point is determined by charge.
         Generally, the only thing you need to do is modify the file path to the db_file in load_event.
         Inspect takes an integer (as just event number x in the database), if not given a specific event_no, which is then loaded in.
@@ -32,7 +34,7 @@ def inspect(event=0, muon=True, event_no=None, angle=45, save=False, degree=Fals
         degree: if True we colour based on node degree and not ti,e
         hist: if true distributions of node features are shown.
         save should be self-explanatory.'''
-    dt=load_event(event, event_no, db_path=db_path, transform_path=transform_path, muon=muon)[0]
+    dt=load_event(event, event_no, db_path=db_path, n_neighbors=n_neighbors, transform_path=transform_path, muon=muon)[0]
     X, A, Y=dt.x, dt.a, dt.y
     if hist:
         fig1, ax1=plt.subplots(nrows=1, ncols=5, figsize=(10,4))
@@ -60,7 +62,11 @@ def plot_3d(G,Y, angle=45, save=False, degree=False):
     edge_max = max([G.degree(i) for i in range(n)])
     # Define color range proportional to number of edges adjacent to a single node
     mint=min(ts.items(), key=lambda x: x[1])[1]
+    maxt=max(ts.items(), key=lambda x: x[1])[1]
+#     print(mint, ts.items())
     tlist=[np.log(t)-np.log(mint) for key, t in ts.items()]
+    tlist=[(t-mint)/(maxt-mint) for key, t in ts.items()]
+#     tlist=[np.log(t-mint)-np.log(maxt-mint) for key, t in ts.items()]
     colors=plt.cm.plasma(tlist)
     if degree:
         colors = [plt.cm.plasma(G.degree(i)/edge_max) for i in range(n)] #if centrality
@@ -80,7 +86,7 @@ def plot_3d(G,Y, angle=45, save=False, degree=False):
             zi = value[2]
             
             # Scatter plot
-            mapa=ax.scatter(xi, yi, zi, c=[colors[key]], s=10+50*10**(2*qs[key]), edgecolors='k', alpha=0.7)
+            mapa=ax.scatter(xi, yi, zi, c=[colors[key]], s=50+10**(4*qs[key]), edgecolors='k', alpha=0.7)
 #             print(50+10*10**(2*qs[key]))
         # Loop on the list of edges to get the x,y,z, coordinates of the connected nodes
         # Those two points are the extrema of the line to be plotted
@@ -98,7 +104,7 @@ def plot_3d(G,Y, angle=45, save=False, degree=False):
     n_nodes, n_edges=G.number_of_nodes(), G.number_of_edges()
     cbar=fig.colorbar(plt.cm.ScalarMappable(norm=mpl.colors.Normalize(), cmap=plt.cm.plasma), ax=ax, shrink=0.8)
     ax.set(xlabel='dom_x', ylabel='dom_y', zlabel='dom_z')
-    info=f'E: {10**Y[0]:.2f} GeV, Zenith: {Y[1]:.2f}, Azimuth:  {Y[2]:.2f} \n Nodes: {n_nodes}, Edges: {n_edges}, Connected Graph: {connect}, Average centrality: {np.mean(central):.4f}'
+    info=f'E: {10**Y[0]:.2f} GeV, Zenith: {Y[1]*180/np.pi:.2f}, Azimuth:  {Y[2]*180/np.pi:.2f} \n Nodes: {n_nodes}, Edges: {n_edges}, Connected Graph: {connect}, Average centrality: {np.mean(central):.4f}'
     ax.set(title=info)
     if save:
      plt.savefig('graph3dtest.png')
@@ -113,7 +119,7 @@ class load_event(Dataset):
     just to load event, important part is that you can either just pick an event_no or just an event by just any integer (of course in the set)
     """
 
-    def __init__(self, event=0, event_no=None, transform=True, muon = True, n_neighbors = 6, transform_path='../db_files', db_path='../db_files/rasmus_classification_muon_3neutrino_3mio.db', restart=True, **kwargs):
+    def __init__(self, event=0, event_no=None, transform=True, muon = True, n_neighbors = 6, transform_path='../db_files/MuonGun/transformers.pkl', db_path='../db_files/MuonGun/rasmus_classification_muon_3neutrino_3mio.db', restart=True, **kwargs):
         self.skip   = event
         self.event_no = event_no
         self.n_neighbors = n_neighbors
@@ -171,7 +177,7 @@ class load_event(Dataset):
                 # Load data from db-file
                 print("Reading files")
                 self.index=start_id
-                df_event = read_sql(f"select event_no       from features where event_no >= {start_id} and event_no < {stop_id}", conn)
+                df_event = read_sql(f"select event_no from features where event_no >= {start_id} and event_no < {stop_id}", conn)
                 df_feat  = read_sql(f"select {feature_call} from features where event_no >= {start_id} and event_no < {stop_id}", conn)
                 df_targ  = read_sql(f"select {target_call } from truth    where event_no >= {start_id} and event_no < {stop_id}", conn)
             else:
@@ -182,7 +188,7 @@ class load_event(Dataset):
                 df_targ  = read_sql(f"select {target_call } from truth    where event_no == {self.event_no}", conn)
             
             if self.transform:
-                transformers = pickle.load(open(osp.join(self.transform_path, "transformers.pkl"), 'rb'))
+                transformers = pickle.load(open(self.transform_path, 'rb'))
                 trans_x      = transformers['features']
                 trans_y      = transformers['truth']
 
