@@ -163,28 +163,6 @@ def train_model(construct_dict):
                         for s in summarylist:
                             table.add_data(s)
                         wandb.log({'Model summary': table})
-                        loader_val    = DisjointLoader(dataset_val, epochs = 1,      batch_size = batch_size)
-                        val_loss, val_loss_from, val_metric = validation(loader_val)
-                        if wandblog:
-                            wandb.log({"Train Loss":      loss / (steps_per_epoch*n_steps),
-                                    "Validation Loss": val_loss, 
-                                    "w(log(E))":   val_metric[1],
-                                    "Energy bias":   val_metric[0][1],
-                                    "Energy sig-1":   val_metric[0][0],
-                                    "Energy sig+1":   val_metric[0][2],
-                                    "Solid angle 68th":    val_metric[2][3],
-                                    "Angle bias":   val_metric[2][1],
-                                    "Angle sig-1":   val_metric[2][0],
-                                    "Angle sig+1":   val_metric[2][2],
-                                    "zenith 68th":    val_metric[3][3],
-                                    "zenith bias":   val_metric[3][1],
-                                    "zenith sig-1":   val_metric[3][0],
-                                    "zenith sig+1":   val_metric[3][2],
-                                    "azimuth 68th":    val_metric[4][3],
-                                    "azimuth bias":   val_metric[4][1],
-                                    "azimuth sig-1":   val_metric[4][0],
-                                    "azimuth sig+1":   val_metric[4][2],
-                                    "Learning rate":   learning_rate})
                 current_batch  += 1
                 pbar.update(1)
                 pbar.set_description(f"Epoch {current_epoch} / {epochs}; Avg_loss: {loss / current_batch:.6f}")

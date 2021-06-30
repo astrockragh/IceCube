@@ -2,12 +2,12 @@
     "experiment": "IceCube",
     "group":  "muon_final", 
 
-    "model_name":  "SageHop",
+    "model_name":  "KHop",
     "wandblog": true,
 
     "run_params":{
     "epochs":     35,
-    "batch_size": 128,
+    "batch_size": 100,
     "early_stop": true,
     "zeniazi_metric":true,
     "patience":   5,
@@ -15,7 +15,7 @@
     "learning_rate":   1e-3,
     "warm_up": 3,
     "lr_decay": 0.9,
-    "val_epoch":   10,
+    "val_epoch":   5,
     "loss_func": "abs_vonMises2D_angle",
     "metrics": "energy_angle_zeniazi",
     "performance_plot": "performance_vM2D_sig",
@@ -27,6 +27,7 @@
         "n_out":           3,
         "n_sigs":          2,
         "hidden_states":   40,
+        "agg_method": "max",
         "conv_layers": 2,
         "decode_layers":   2,
         "decode_activation": 1,
