@@ -9,8 +9,8 @@ wandb.ipynb
 wandb
 input.py
 from_config/processed
-from_config/dev/run_submit2.py
-from_config/dev/train_submit2.py
+from_config/dev/run_submit_old.py
+from_config/dev/train_submit_old.py
 from_config/nohup.out
 from_config_dev/nohup.out
 compare/nohup.out
