@@ -30,7 +30,7 @@ SHUTDOWN = False
 
 # Generate list over experiments to run
 from dev.utils import list_experiments, clean_done, check_dataset
-from dev.train_submit2 import train_model
+from dev.train_submit_test import train_model
 clean_done(exp0_folder)
 exp_folder, exp_list = list_experiments(exp0_folder)
 
